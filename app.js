@@ -6,13 +6,13 @@ const DATA = {
   profile:{ nombre:'Valentina', apellido:'Rojas', calle:'', ciudad:'', cp:'', nif:'', ivaIntra:'' },
   centers:[
     {id:'c1', name:'Clínica Dental Andes', active:true,
-      billing:{rep:'Dra. Valentina Rojas', street:'Calle Mayor 12', city:'Madrid', cp:'28013', cif:'B12345678', ivaIntra:''},
+      billing:{rep:'Dra. Valentina Rojas', street:'Calle Mayor 12', city:'Madrid', cp:'28013', taxIdType:'CIF', taxId:'B12345678', ivaIntra:''},
       variables:[{id:'v1', name:'Adulto', pct:35},{id:'v2', name:'Niño', pct:20}]},
     {id:'c2', name:'Hospital San Rafael', active:true,
-      billing:{rep:'Hospital San Rafael S.L.', street:'Av. de la Constitución 45', city:'Sevilla', cp:'41001', cif:'B87654321', ivaIntra:''},
+      billing:{rep:'Hospital San Rafael S.L.', street:'Av. de la Constitución 45', city:'Sevilla', cp:'41001', taxIdType:'CIF', taxId:'B87654321', ivaIntra:''},
       variables:[{id:'v1', name:'General', pct:30}]},
     {id:'c3', name:'Clínica Bellavista', active:true,
-      billing:{rep:'Clínica Bellavista S.L.', street:'Passeig de Gràcia 88', city:'Barcelona', cp:'08008', cif:'B11223344', ivaIntra:''},
+      billing:{rep:'Clínica Bellavista S.L.', street:'Passeig de Gràcia 88', city:'Barcelona', cp:'08008', taxIdType:'CIF', taxId:'B11223344', ivaIntra:''},
       variables:[{id:'v1', name:'Adulto', pct:40},{id:'v2', name:'Niño', pct:25},{id:'v3', name:'Anciano', pct:30}]},
   ],
   procedures:[
@@ -57,6 +57,7 @@ const S = {
   view:'operator',            // 'operator' | 'admin'
   opScreen:'registro',        // 'registro' | 'historial'
   adminScreen:'resumen',
+  mobileNavOpen:false,
   // registro form state
   form:{ centerId:'c1', variableId:null, procIds:[] },
   ticket:null,                // ticket data to show, or null
@@ -305,6 +306,10 @@ function detailModal(){
 }
 
 /* ---------------- ADMIN ---------------- */
+const ADMIN_SCREEN_LABELS = {
+  resumen:'Resumen', centros:'Centros', procedimientos:'Procedimientos', tarifas:'Tarifas',
+  facturacion:'Facturación', registros:'Registros', auditoria:'Auditoría', perfil:'Perfil',
+};
 function adminScreen(){
   const screens = {
     resumen: adminResumen, centros: adminCentros, procedimientos: adminProcedimientos,
@@ -312,7 +317,14 @@ function adminScreen(){
   };
   return `
   <div class="admin-wrap">
-    <div class="admin-side">
+    <div class="mobile-topbar">
+      <button class="hamburger-btn" onclick="App.toggleMobileNav()" aria-label="Abrir menú">
+        <span class="bars"><span></span><span></span><span></span></span>
+      </button>
+      <div class="name">${ADMIN_SCREEN_LABELS[S.adminScreen] || 'Heaven'}</div>
+    </div>
+    <div class="nav-backdrop ${S.mobileNavOpen?'open':''}" onclick="App.closeMobileNav()"></div>
+    <div class="admin-side ${S.mobileNavOpen?'open':''}">
       <div class="brand"><div class="mark"><img src="${ICON}" alt="Heaven"/></div><div class="name">Heaven</div></div>
       <div class="admin-nav">
         ${navBtn('resumen','Resumen')}
@@ -469,7 +481,14 @@ function centerCard(c, editing){
     <div class="section-label" style="margin-top:16px">Datos de facturación</div>
     <div class="form-grid">
       <div class="f"><label>Razón social / Nombre</label><input id="edit-center-rep-${c.id}" value="${c.billing.rep}"/></div>
-      <div class="f"><label>NIF / Identificador fiscal</label><input id="edit-center-cif-${c.id}" value="${c.billing.cif}"/></div>
+      <div class="f">
+        <label>Tipo de identificación fiscal</label>
+        <select id="edit-center-taxidtype-${c.id}">
+          <option value="CIF" ${c.billing.taxIdType==='CIF'?'selected':''}>CIF</option>
+          <option value="NIF" ${c.billing.taxIdType==='NIF'?'selected':''}>NIF</option>
+        </select>
+      </div>
+      <div class="f"><label>Número de identificación fiscal</label><input id="edit-center-taxid-${c.id}" value="${c.billing.taxId}"/></div>
       <div class="f"><label>IVA intracomunitario</label><input id="edit-center-ivaintra-${c.id}" placeholder="Ej: ESX1234567X" value="${c.billing.ivaIntra||''}"/></div>
       <div class="f"><label>Calle</label><input id="edit-center-street-${c.id}" value="${c.billing.street}"/></div>
       <div class="f"><label>Ciudad</label><input id="edit-center-city-${c.id}" value="${c.billing.city}"/></div>
@@ -497,7 +516,7 @@ function centerCard(c, editing){
   <div class="center-card-head">
     <div>
       <div class="c-name">${c.name}</div>
-      <div class="c-sub">${c.billing.rep || 'Sin razón social'} · ${c.billing.cif || 'sin NIF'}</div>
+      <div class="c-sub">${c.billing.rep || 'Sin razón social'} · ${c.billing.taxId ? (c.billing.taxIdType+': '+c.billing.taxId) : 'sin NIF/CIF'}</div>
       ${c.billing.ivaIntra ? `<div class="c-sub">IVA UE: ${c.billing.ivaIntra}</div>` : ''}
     </div>
     <button class="switch ${c.active?'on':''}" onclick="App.toggleCenterActive('${c.id}')"><span class="knob"></span></button>
@@ -737,21 +756,21 @@ function buildInvoicePDF(inv){
   doc.setFont('helvetica','normal');
   doc.text(c.billing.rep || c.name, x2+boxW/2, y+13.5, {align:'center'});
   doc.text([c.billing.street,c.billing.city,c.billing.cp].filter(Boolean).join(', ') || '—', x2+boxW/2, y+19.5, {align:'center'});
-  doc.text(c.billing.cif ? `NIF: ${c.billing.cif}` : 'NIF: —', x2+boxW/2, y+25.5, {align:'center'});
+  doc.text(c.billing.taxId ? `${c.billing.taxIdType||'CIF'}: ${c.billing.taxId}` : 'NIF/CIF: —', x2+boxW/2, y+25.5, {align:'center'});
   if(c.billing.ivaIntra) doc.text(`IVA UE: ${c.billing.ivaIntra}`, x2+boxW/2, y+30.5, {align:'center'});
 
   y += 44;
   doc.setFont('helvetica','bold'); doc.setFontSize(9);
   doc.text('Factura n.º', mx, y);
   doc.text('Fecha de emisión', mx+65, y);
-  doc.text('NIF cliente', mx+130, y);
+  doc.text(`${c.billing.taxIdType||'CIF'} cliente`, mx+130, y);
   y += 2;
   doc.setLineWidth(0.2); doc.line(mx, y, pageRight, y);
   y += 6;
   doc.setFont('helvetica','normal');
   doc.text(inv.numero, mx, y);
   doc.text(fmtDate(inv.issueDate), mx+65, y);
-  doc.text(c.billing.cif || '—', mx+130, y);
+  doc.text(c.billing.taxId || '—', mx+130, y);
   y += 3;
   doc.line(mx, y, pageRight, y);
   y += 14;
@@ -924,8 +943,10 @@ const App = {
   closeDetail(){ S.detailReg = null; render(); },
 
   goAdmin(){ S.view='admin'; S.adminScreen='resumen'; render(); },
-  goOperator(){ S.view='operator'; render(); },
-  setAdminScreen(s){ S.adminScreen = s; render(); },
+  goOperator(){ S.view='operator'; S.mobileNavOpen=false; render(); },
+  setAdminScreen(s){ S.adminScreen = s; S.mobileNavOpen=false; render(); },
+  toggleMobileNav(){ S.mobileNavOpen = !S.mobileNavOpen; render(); },
+  closeMobileNav(){ S.mobileNavOpen = false; render(); },
 
   toggleCenterActive(id){
     const c = DATA.centers.find(x=>x.id===id); c.active = !c.active; render();
@@ -936,7 +957,7 @@ const App = {
     if(!name) return;
     const id = 'c'+(DATA.centers.length+1);
     DATA.centers.push({id, name, active:true,
-      billing:{rep:'', street:'', city:'', cp:'', cif:'', ivaIntra:''},
+      billing:{rep:'', street:'', city:'', cp:'', taxIdType:'CIF', taxId:'', ivaIntra:''},
       variables:[]});
     DATA.procedures.forEach(p=>{ DATA.rates[id+'_'+p.id+'_unico']=0; });
     DATA.audit.push({ts:nowTs(), action:'creado', desc:`Centro creado: ${name}`});
@@ -968,7 +989,8 @@ const App = {
       street: document.getElementById('edit-center-street-'+id).value.trim(),
       city: document.getElementById('edit-center-city-'+id).value.trim(),
       cp: document.getElementById('edit-center-cp-'+id).value.trim(),
-      cif: document.getElementById('edit-center-cif-'+id).value.trim(),
+      taxIdType: document.getElementById('edit-center-taxidtype-'+id).value,
+      taxId: document.getElementById('edit-center-taxid-'+id).value.trim(),
       ivaIntra: document.getElementById('edit-center-ivaintra-'+id).value.trim(),
     };
     let maxIdx = 0;

@@ -47,6 +47,7 @@ const DATA = {
     {ts:'2026-07-05 11:02', action:'creado', desc:'Registro r2 — Hospital San Rafael'},
     {ts:'2026-07-06 16:40', action:'creado', desc:'Registro r3 — Clínica Bellavista'},
   ],
+  invoices:[],
 };
 let regCounter = DATA.registrations.length;
 
@@ -79,6 +80,8 @@ const S = {
   resumenGroup:'dia',
   resumenDateFrom:null,
   resumenDateTo:null,
+
+  facturaForm:{ centerId:'c1', numero:'', dateFrom:'', dateTo:'', ivaPct:0, retPct:'', notas:'' },
 };
 
 function money(n){ return new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n); }
@@ -305,7 +308,7 @@ function detailModal(){
 function adminScreen(){
   const screens = {
     resumen: adminResumen, centros: adminCentros, procedimientos: adminProcedimientos,
-    tarifas: adminTarifas, registros: adminRegistros, auditoria: adminAuditoria, perfil: adminPerfil,
+    tarifas: adminTarifas, facturacion: adminFacturacion, registros: adminRegistros, auditoria: adminAuditoria, perfil: adminPerfil,
   };
   return `
   <div class="admin-wrap">
@@ -316,6 +319,7 @@ function adminScreen(){
         ${navBtn('centros','Centros')}
         ${navBtn('procedimientos','Procedimientos')}
         ${navBtn('tarifas','Tarifas')}
+        ${navBtn('facturacion','Facturación')}
         ${navBtn('registros','Registros')}
         ${navBtn('auditoria','Auditoría')}
       </div>
@@ -631,6 +635,168 @@ function adminRegistros(){
   </div>`;
 }
 
+function adminFacturacion(){
+  const f = S.facturaForm;
+  let preview = null;
+  if(f.centerId && f.dateFrom && f.dateTo){
+    const regs = DATA.registrations.filter(r=>!r.deleted && r.centerId===f.centerId && r.date>=f.dateFrom && r.date<=f.dateTo);
+    const base = regs.reduce((s,r)=>s+(r.earned||0),0);
+    const ivaPct = parseFloat(f.ivaPct)||0;
+    const retPct = parseFloat(f.retPct)||0;
+    const ivaAmount = Math.round(base*ivaPct/100);
+    const retAmount = Math.round(base*retPct/100);
+    const total = base + ivaAmount - retAmount;
+    preview = { count: regs.length, base, ivaAmount, retAmount, total };
+  }
+  const invoices = [...DATA.invoices].reverse();
+
+  return `
+  <div class="admin-head"><div><h1>Facturación</h1><p>Genera la factura de tus honorarios a cada centro.</p></div></div>
+
+  <div class="panel" style="padding:18px">
+    <div class="form-grid">
+      <div class="f"><label>Centro</label>
+        <select onchange="App.setFacturaField('centerId',this.value)">
+          ${DATA.centers.map(c=>`<option value="${c.id}" ${c.id===f.centerId?'selected':''}>${c.name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="f"><label>Número de factura</label><input placeholder="Ej: 26/001" value="${f.numero}" onchange="App.setFacturaField('numero',this.value)"/></div>
+      <div class="f"><label>Fecha de operación — desde</label><input type="date" value="${f.dateFrom}" onchange="App.setFacturaField('dateFrom',this.value)"/></div>
+      <div class="f"><label>Fecha de operación — hasta</label><input type="date" value="${f.dateTo}" onchange="App.setFacturaField('dateTo',this.value)"/></div>
+      <div class="f"><label>% IVA</label><input class="rate-input" style="width:100%" value="${f.ivaPct}" onchange="App.setFacturaField('ivaPct',this.value)"/></div>
+      <div class="f"><label>% Retención IRPF (opcional)</label><input class="rate-input" style="width:100%" value="${f.retPct}" onchange="App.setFacturaField('retPct',this.value)"/></div>
+    </div>
+    <div class="f" style="margin-top:10px">
+      <label>Notas adicionales / cláusulas legales</label>
+      <textarea rows="3" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;resize:vertical" onchange="App.setFacturaField('notas',this.value)">${f.notas}</textarea>
+    </div>
+
+    ${preview ? `
+    <div class="panel" style="margin:16px 0 0;background:var(--surface-alt);border:none;box-shadow:none">
+      <div class="panel-title">Vista previa — ${preview.count} registro${preview.count===1?'':'s'} en el periodo</div>
+      <div class="bar-row"><div class="name">Base imponible (total ganado)</div><div class="bar-track" style="visibility:hidden"></div><div class="amt">${money(preview.base)}</div></div>
+      ${preview.ivaAmount!==0 ? `<div class="bar-row"><div class="name">IVA (${f.ivaPct}%)</div><div class="bar-track" style="visibility:hidden"></div><div class="amt">${money(preview.ivaAmount)}</div></div>` : ''}
+      ${preview.retAmount!==0 ? `<div class="bar-row"><div class="name">Retención IRPF (${f.retPct}%)</div><div class="bar-track" style="visibility:hidden"></div><div class="amt">${money(-preview.retAmount)}</div></div>` : ''}
+      <div class="bar-row"><div class="name" style="font-weight:700">Total</div><div class="bar-track" style="visibility:hidden"></div><div class="amt" style="font-weight:700;color:var(--accent)">${money(preview.total)}</div></div>
+    </div>` : `<p class="hint" style="padding-top:10px">Selecciona centro y el periodo (fecha de operación) para ver el cálculo.</p>`}
+
+    <button class="btn-add" style="margin-top:16px" onclick="App.generateFactura()">Generar factura (PDF)</button>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Facturas emitidas</div>
+    ${invoices.length===0 ? `<div class="empty">Todavía no generaste ninguna factura.</div>` : `
+    <div class="table-wrap"><table>
+      <thead><tr><th>Número</th><th>Centro</th><th>Periodo</th><th>Emitida</th><th>Total</th><th>Acciones</th></tr></thead>
+      <tbody>
+        ${invoices.map(inv=>`
+        <tr>
+          <td style="font-weight:600">${inv.numero}</td>
+          <td>${centerName(inv.centerId)}</td>
+          <td>${fmtDate(inv.dateFrom)} – ${fmtDate(inv.dateTo)}</td>
+          <td>${fmtDate(inv.issueDate)}</td>
+          <td style="font-family:var(--mono)">${money(inv.total)}</td>
+          <td class="row-actions"><button class="icon-btn" onclick="App.redownloadFactura('${inv.id}')">Descargar</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>`}
+  </div>`;
+}
+
+function buildInvoicePDF(inv){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+  const mx = 20, boxW = 84, gap = 3, pageRight = mx + boxW*2 + gap;
+  let y = 20;
+  const p = DATA.profile;
+  const c = DATA.centers.find(x=>x.id===inv.centerId) || {name:'—', billing:{}};
+
+  doc.setFont('helvetica','normal');
+
+  // Caja emisor
+  doc.setLineWidth(0.3);
+  doc.rect(mx, y, boxW, 34);
+  doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  doc.text('DATOS PROFESIONAL', mx+boxW/2, y+7, {align:'center'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.text(`${p.nombre||''} ${p.apellido||''}`.trim() || '—', mx+boxW/2, y+13.5, {align:'center'});
+  doc.text([p.calle,p.ciudad,p.cp].filter(Boolean).join(', ') || '—', mx+boxW/2, y+19.5, {align:'center'});
+  doc.text(p.nif ? `NIF: ${p.nif}` : 'NIF: —', mx+boxW/2, y+25.5, {align:'center'});
+  if(p.ivaIntra) doc.text(`IVA UE: ${p.ivaIntra}`, mx+boxW/2, y+30.5, {align:'center'});
+
+  // Caja receptor
+  const x2 = mx + boxW + gap;
+  doc.rect(x2, y, boxW, 34);
+  doc.setFont('helvetica','bold');
+  doc.text('DATOS CLIENTE', x2+boxW/2, y+7, {align:'center'});
+  doc.setFont('helvetica','normal');
+  doc.text(c.billing.rep || c.name, x2+boxW/2, y+13.5, {align:'center'});
+  doc.text([c.billing.street,c.billing.city,c.billing.cp].filter(Boolean).join(', ') || '—', x2+boxW/2, y+19.5, {align:'center'});
+  doc.text(c.billing.cif ? `NIF: ${c.billing.cif}` : 'NIF: —', x2+boxW/2, y+25.5, {align:'center'});
+  if(c.billing.ivaIntra) doc.text(`IVA UE: ${c.billing.ivaIntra}`, x2+boxW/2, y+30.5, {align:'center'});
+
+  y += 44;
+  doc.setFont('helvetica','bold'); doc.setFontSize(9);
+  doc.text('Factura n.º', mx, y);
+  doc.text('Fecha de emisión', mx+65, y);
+  doc.text('NIF cliente', mx+130, y);
+  y += 2;
+  doc.setLineWidth(0.2); doc.line(mx, y, pageRight, y);
+  y += 6;
+  doc.setFont('helvetica','normal');
+  doc.text(inv.numero, mx, y);
+  doc.text(fmtDate(inv.issueDate), mx+65, y);
+  doc.text(c.billing.cif || '—', mx+130, y);
+  y += 3;
+  doc.line(mx, y, pageRight, y);
+  y += 14;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(10);
+  doc.text(`HONORARIOS PROFESIONALES — PERIODO ${fmtDate(inv.dateFrom)} A ${fmtDate(inv.dateTo)}`, mx, y);
+  doc.text(money(inv.base), pageRight, y, {align:'right'});
+  y += 12;
+
+  doc.setLineWidth(0.3); doc.line(mx, y, pageRight, y);
+  y += 9;
+
+  doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  doc.text('BASE IMPONIBLE', mx, y);
+  doc.text(money(inv.base), pageRight, y, {align:'right'});
+  y += 7;
+  if(inv.ivaPct){
+    doc.text(`${inv.ivaPct}% IVA`, mx, y);
+    doc.text(money(inv.ivaAmount), pageRight, y, {align:'right'});
+    y += 7;
+  }
+  if(inv.retPct){
+    doc.text(`${inv.retPct}% RETENCIÓN I.R.P.F.`, mx, y);
+    doc.text(money(-inv.retAmount), pageRight, y, {align:'right'});
+    y += 7;
+  }
+  y += 3;
+  doc.setFont('helvetica','bold'); doc.setFontSize(11.5);
+  doc.text('TOTAL', mx, y);
+  doc.text(money(inv.total), pageRight, y, {align:'right'});
+  y += 4;
+  doc.setLineWidth(0.4); doc.line(mx, y, pageRight, y);
+  y += 14;
+
+  if(inv.notas){
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5);
+    const lines = doc.splitTextToSize(inv.notas, pageRight-mx);
+    doc.text(lines, mx, y);
+    y += lines.length*4.2 + 10;
+  }
+
+  y = Math.max(y, 255);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.text('Firmado:', mx+boxW/2, y, {align:'center'});
+  doc.setLineWidth(0.2);
+  doc.line(mx+30, y+16, mx+boxW+gap+30, y+16);
+
+  return doc;
+}
+
 function adminAuditoria(){
   const rows = [...DATA.audit].reverse();
   return `
@@ -923,6 +1089,42 @@ const App = {
     DATA.profile = {...S.profileDraft};
     DATA.audit.push({ts:nowTs(), action:'editado', desc:'Perfil actualizado'});
     S.profileDirty = false; S.profileSaved = true; render();
+  },
+  setFacturaField(field,val){ S.facturaForm[field] = val; render(); },
+  generateFactura(){
+    const f = S.facturaForm;
+    if(!f.numero || !f.numero.trim()){ alert('Ingresa un número de factura.'); return; }
+    if(!f.dateFrom || !f.dateTo){ alert('Selecciona el periodo (fecha de operación).'); return; }
+    if(f.dateFrom > f.dateTo){ alert('La fecha "desde" no puede ser posterior a "hasta".'); return; }
+    const regs = DATA.registrations.filter(r=>!r.deleted && r.centerId===f.centerId && r.date>=f.dateFrom && r.date<=f.dateTo);
+    const base = regs.reduce((s,r)=>s+(r.earned||0),0);
+    const ivaPct = parseFloat(f.ivaPct)||0;
+    const retPct = parseFloat(f.retPct)||0;
+    const ivaAmount = Math.round(base*ivaPct/100);
+    const retAmount = Math.round(base*retPct/100);
+    const total = base + ivaAmount - retAmount;
+    const inv = {
+      id: 'f'+(DATA.invoices.length+1)+'-'+Date.now(),
+      numero: f.numero.trim(),
+      centerId: f.centerId,
+      dateFrom: f.dateFrom,
+      dateTo: f.dateTo,
+      issueDate: new Date().toISOString().slice(0,10),
+      ivaPct, retPct, base, ivaAmount, retAmount, total,
+      notas: f.notas || '',
+    };
+    DATA.invoices.push(inv);
+    DATA.audit.push({ts:nowTs(), action:'creado', desc:`Factura ${inv.numero} — ${centerName(inv.centerId)}`});
+    const doc = buildInvoicePDF(inv);
+    doc.save(`factura-${inv.numero.replace(/[^a-z0-9]+/gi,'-')}.pdf`);
+    S.facturaForm.numero = '';
+    render();
+  },
+  redownloadFactura(id){
+    const inv = DATA.invoices.find(x=>x.id===id);
+    if(!inv) return;
+    const doc = buildInvoicePDF(inv);
+    doc.save(`factura-${inv.numero.replace(/[^a-z0-9]+/gi,'-')}.pdf`);
   },
   setDraftRate(key,val){
     const n = parseInt(val,10)||0;

@@ -38,9 +38,29 @@ const DATA = {
     c3_p4_unico:250, c3_p5_unico:45, c3_p6_unico:200,
   },
   registrations:[
-    {id:'r1', centerId:'c1', variableId:'v1', procIds:['p1','p3'], total:115, profitPct:35, earned:40, date:'2026-07-03', deleted:false},
-    {id:'r2', centerId:'c2', variableId:'v1', procIds:['p2'], total:55, profitPct:30, earned:17, date:'2026-07-05', deleted:false},
-    {id:'r3', centerId:'c3', variableId:'v1', procIds:['p4'], total:250, profitPct:40, earned:100, date:'2026-07-06', deleted:false},
+    {id:'r1', centerId:'c1', variableId:'v1', procIds:['p1','p3'], total:115, profitPct:35, earned:40, date:'2026-07-03', deleted:false, patientName:'Marta Gómez', patientCode:'P-0231'},
+    {id:'r2', centerId:'c2', variableId:'v1', procIds:['p2'], total:55, profitPct:30, earned:17, date:'2026-07-05', deleted:false, patientName:'Luis Herrera', patientCode:'P-0198'},
+    {id:'r3', centerId:'c3', variableId:'v1', procIds:['p4'], total:250, profitPct:40, earned:100, date:'2026-07-06', deleted:false, patientName:'Carla Ibáñez', patientCode:'P-0305'},
+    {id:'r4', centerId:'c2', variableId:'v1', procIds:['p4'], total:200, profitPct:30, earned:60, date:'2026-06-01', deleted:false, patientName:'Diego Molina', patientCode:'P-0088'},
+    {id:'r5', centerId:'c1', variableId:'v2', procIds:['p6'], total:180, profitPct:20, earned:36, date:'2026-06-05', deleted:false, patientName:'Diego Salas', patientCode:'P-0450'},
+    {id:'r6', centerId:'c2', variableId:'v1', procIds:['p4','p6'], total:360, profitPct:30, earned:108, date:'2026-06-06', deleted:false, patientName:'Carla Ibáñez', patientCode:'P-0305'},
+    {id:'r7', centerId:'c1', variableId:'v2', procIds:['p6'], total:180, profitPct:20, earned:36, date:'2026-06-07', deleted:false, patientName:'Óscar Nieto', patientCode:'P-0367'},
+    {id:'r8', centerId:'c2', variableId:'v1', procIds:['p1','p2'], total:93, profitPct:30, earned:28, date:'2026-06-09', deleted:false, patientName:'Mario Cano', patientCode:'P-0067'},
+    {id:'r9', centerId:'c1', variableId:'v1', procIds:['p2'], total:65, profitPct:35, earned:23, date:'2026-06-11', deleted:false, patientName:'Alba Ferrer', patientCode:'P-0154'},
+    {id:'r10', centerId:'c1', variableId:'v1', procIds:['p3'], total:70, profitPct:35, earned:24, date:'2026-06-14', deleted:false, patientName:'Paula Reyes', patientCode:'P-0298'},
+    {id:'r11', centerId:'c2', variableId:'v1', procIds:['p3'], total:60, profitPct:30, earned:18, date:'2026-06-19', deleted:false, patientName:'Sergio Ramos', patientCode:'P-0355'},
+    {id:'r12', centerId:'c2', variableId:'v1', procIds:['p3','p2'], total:115, profitPct:30, earned:34, date:'2026-06-23', deleted:false, patientName:'Elena Vidal', patientCode:'P-0119'},
+    {id:'r13', centerId:'c3', variableId:'v3', procIds:['p6'], total:200, profitPct:30, earned:60, date:'2026-06-25', deleted:false, patientName:'Rubén Montes', patientCode:'P-0522'},
+    {id:'r14', centerId:'c3', variableId:'v1', procIds:['p4'], total:250, profitPct:40, earned:100, date:'2026-06-26', deleted:false, patientName:'Clara Vega', patientCode:'P-0176'},
+    {id:'r15', centerId:'c2', variableId:'v1', procIds:['p5','p6'], total:195, profitPct:30, earned:58, date:'2026-06-29', deleted:false, patientName:'Irene Soler', patientCode:'P-0209'},
+    {id:'r16', centerId:'c1', variableId:'v2', procIds:['p1'], total:30, profitPct:20, earned:6, date:'2026-07-04', deleted:false, patientName:'Nuria Blanco', patientCode:'P-0333'},
+    {id:'r17', centerId:'c1', variableId:'v2', procIds:['p3'], total:45, profitPct:20, earned:9, date:'2026-07-04', deleted:false, patientName:'Luis Herrera', patientCode:'P-0198'},
+    {id:'r18', centerId:'c1', variableId:'v1', procIds:['p5','p3'], total:110, profitPct:35, earned:38, date:'2026-07-05', deleted:false, patientName:'Hugo Delgado', patientCode:'P-0489'},
+    {id:'r19', centerId:'c1', variableId:'v2', procIds:['p5'], total:40, profitPct:20, earned:8, date:'2026-07-06', deleted:false, patientName:'Sofía Rueda', patientCode:'P-0388'},
+    {id:'r20', centerId:'c2', variableId:'v1', procIds:['p1'], total:38, profitPct:30, earned:11, date:'2026-07-07', deleted:false, patientName:'Iván Cortés', patientCode:'P-0441'},
+    {id:'r21', centerId:'c1', variableId:'v2', procIds:['p6','p4'], total:400, profitPct:20, earned:80, date:'2026-07-08', deleted:false, patientName:'Pablo Ortiz', patientCode:'P-0276'},
+    {id:'r22', centerId:'c3', variableId:'v2', procIds:['p1'], total:32, profitPct:25, earned:8, date:'2026-07-08', deleted:false, patientName:'Lucía Campos', patientCode:'P-0501'},
+    {id:'r23', centerId:'c1', variableId:'v2', procIds:['p2'], total:40, profitPct:20, earned:8, date:'2026-07-09', deleted:false, patientName:'Marta Gómez', patientCode:'P-0231'},
   ],
   audit:[
     {ts:'2026-07-03 09:14', action:'creado', desc:'Registro r1 — Clínica Dental Andes'},
@@ -59,7 +79,7 @@ const S = {
   adminScreen:'resumen',
   mobileNavOpen:false,
   // registro form state
-  form:{ centerId:'c1', variableId:null, procIds:[] },
+  form:{ centerId:'c1', variableId:null, procIds:[], patientName:'', patientCode:'' },
   ticket:null,                // ticket data to show, or null
   detailReg:null,             // registration id shown in read-only modal
   editReg:null,               // registration id being edited in admin
@@ -219,6 +239,14 @@ function opRegistro(){
     </div>
 
     <div class="section-label">Paciente</div>
+    <div class="field" style="margin-bottom:10px">
+      <input placeholder="Nombre del paciente" value="${f.patientName}" onchange="App.setPatientField('patientName',this.value)"/>
+    </div>
+    <div class="field" style="margin-bottom:20px">
+      <input placeholder="Código de paciente" value="${f.patientCode}" onchange="App.setPatientField('patientCode',this.value)"/>
+    </div>
+
+    <div class="section-label">Categoría de paciente</div>
     ${variables.length===0 ? `
     <p class="hint" style="margin:0 0 20px">Este centro no tiene variables definidas. Agrégalas en Centros dentro del panel admin.</p>
     ` : `
@@ -260,7 +288,7 @@ function opHistorial(){
       <button class="hist-row" style="width:100%;border:1px solid var(--border);text-align:left;" onclick="App.openDetail('${r.id}')">
         <div class="l">
           <div class="center">${centerName(r.centerId)}</div>
-          <div class="meta">${fmtDate(r.date)} · ${r.procIds.length} procedimiento${r.procIds.length>1?'s':''}</div>
+          <div class="meta">${r.patientName ? r.patientName+' · ' : ''}${fmtDate(r.date)} · ${r.procIds.length} procedimiento${r.procIds.length>1?'s':''}</div>
         </div>
         <div class="r">
           <div class="total">${money(r.total)}</div>
@@ -283,7 +311,9 @@ function ticketOverlay(){
         <div class="d">${t.date} · ${t.id.toUpperCase()}</div>
       </div>
       <div class="t-row"><span class="k">Centro</span><span class="v">${centerName(t.centerId)}</span></div>
-      <div class="t-row"><span class="k">Paciente</span><span class="v">${variableName(t.centerId, t.variableId)}</span></div>
+      ${t.patientName ? `<div class="t-row"><span class="k">Paciente</span><span class="v">${t.patientName}</span></div>` : ''}
+      ${t.patientCode ? `<div class="t-row"><span class="k">Código</span><span class="v">${t.patientCode}</span></div>` : ''}
+      <div class="t-row"><span class="k">Categoría</span><span class="v">${variableName(t.centerId, t.variableId)}</span></div>
       <div class="t-divider"></div>
       ${t.procIds.map(pid=>`<div class="t-row"><span class="k">${procName(pid)}</span><span class="v">${money(rateFor(t.centerId,pid,t.variableId))}</span></div>`).join('')}
       <div class="t-divider"></div>
@@ -303,7 +333,9 @@ function detailModal(){
       <h3>Detalle del registro</h3>
       <div class="t-row"><span class="k">Fecha</span><span class="v">${fmtDate(r.date)}</span></div>
       <div class="t-row"><span class="k">Centro</span><span class="v">${centerName(r.centerId)}</span></div>
-      <div class="t-row"><span class="k">Paciente</span><span class="v">${variableName(r.centerId, r.variableId)}</span></div>
+      ${r.patientName ? `<div class="t-row"><span class="k">Paciente</span><span class="v">${r.patientName}</span></div>` : ''}
+      ${r.patientCode ? `<div class="t-row"><span class="k">Código</span><span class="v">${r.patientCode}</span></div>` : ''}
+      <div class="t-row"><span class="k">Categoría</span><span class="v">${variableName(r.centerId, r.variableId)}</span></div>
       <div class="t-divider"></div>
       ${r.procIds.map(pid=>`<div class="t-row"><span class="k">${procName(pid)}</span><span class="v">${money(rateFor(r.centerId,pid,r.variableId))}</span></div>`).join('')}
       <div class="t-divider"></div>
@@ -672,7 +704,7 @@ function adminRegistros(){
   <div class="panel">
     ${regs.length===0 ? `<div class="empty">Sin registros para este filtro.</div>` : `
     <div class="table-wrap responsive-table"><table>
-      <thead><tr><th>ID</th><th>Centro</th><th>Fecha</th><th>Paciente</th><th>Procedimientos</th><th>Total</th><th>Ganancia</th><th>Acciones</th></tr></thead>
+      <thead><tr><th>ID</th><th>Centro</th><th>Fecha</th><th>Nombre</th><th>Código</th><th>Categoría</th><th>Procedimientos</th><th>Total</th><th>Ganancia</th><th>Acciones</th></tr></thead>
       <tbody>
         ${regs.map(r=>`
         <tr class="${r.deleted?'eliminado':''}">
@@ -683,10 +715,12 @@ function adminRegistros(){
             <button class="icon-btn" onclick="App.openEdit('${r.id}')" ${r.deleted?'disabled':''}>Editar</button>
             <button class="icon-btn danger" onclick="App.deleteReg('${r.id}')" ${r.deleted?'disabled':''}>Eliminar</button>
           </td>
-          <td data-label="Paciente" style="order:4"><span class="badge adulto">${variableName(r.centerId, r.variableId)}</span></td>
-          <td data-label="Procedimientos" style="order:5;color:var(--ink-soft)">${r.procIds.map(procName).join(', ')}</td>
-          <td data-label="Total" style="order:6;font-family:var(--mono)">${money(r.total)}</td>
-          <td data-label="Ganancia" style="order:7;font-family:var(--mono);color:var(--accent)">${money(r.earned)} <span style="color:var(--ink-faint);font-size:11px">(${r.profitPct}%)</span></td>
+          <td data-label="Nombre" style="order:4">${r.patientName || '—'}</td>
+          <td data-label="Código" style="order:5">${r.patientCode || '—'}</td>
+          <td data-label="Categoría" style="order:6"><span class="badge adulto">${variableName(r.centerId, r.variableId)}</span></td>
+          <td data-label="Procedimientos" style="order:7;color:var(--ink-soft)">${r.procIds.map(procName).join(', ')}</td>
+          <td data-label="Total" style="order:8;font-family:var(--mono)">${money(r.total)}</td>
+          <td data-label="Ganancia" style="order:9;font-family:var(--mono);color:var(--accent)">${money(r.earned)} <span style="color:var(--ink-faint);font-size:11px">(${r.profitPct}%)</span></td>
         </tr>`).join('')}
       </tbody>
     </table></div>`}
@@ -923,7 +957,9 @@ function editModal(){
   <div class="modal-overlay" onclick="if(event.target===this) App.closeEdit()">
     <div class="modal">
       <h3>Editar registro</h3>
-      <div class="section-label">Paciente</div>
+      <div class="f" style="margin-bottom:10px"><label>Nombre del paciente</label><input value="${r.patientName||''}" onchange="App.editSetPatientField('patientName',this.value)"/></div>
+      <div class="f" style="margin-bottom:16px"><label>Código de paciente</label><input value="${r.patientCode||''}" onchange="App.editSetPatientField('patientCode',this.value)"/></div>
+      <div class="section-label">Categoría de paciente</div>
       <div class="chip-row" style="margin-bottom:16px">
         ${variables.map(v=>`<button class="chip ${r.variableId===v.id?'selected':''}" onclick="App.editSetVariable('${v.id}')">${v.name}</button>`).join('') || '<p class="hint">Sin variables definidas en este centro.</p>'}
       </div>
@@ -960,6 +996,7 @@ const App = {
     render();
   },
   setVariable(id){ S.form.variableId = id; render(); },
+  setPatientField(field,val){ S.form[field] = val; render(); },
   toggleProc(id){
     const i = S.form.procIds.indexOf(id);
     if(i>-1) S.form.procIds.splice(i,1); else S.form.procIds.push(id);
@@ -973,7 +1010,8 @@ const App = {
     regCounter++;
     const id = 'r'+regCounter;
     const date = new Date().toISOString().slice(0,10);
-    const reg = {id, centerId:f.centerId, variableId:f.variableId, procIds:[...f.procIds], total, profitPct, earned, date, deleted:false};
+    const reg = {id, centerId:f.centerId, variableId:f.variableId, procIds:[...f.procIds], total, profitPct, earned, date, deleted:false,
+      patientName: (f.patientName||'').trim(), patientCode: (f.patientCode||'').trim()};
     DATA.registrations.push(reg);
     DATA.audit.push({ts: date+' '+new Date().toTimeString().slice(0,5), action:'creado', desc:`Registro ${id} — ${centerName(f.centerId)}`});
     S.ticket = reg;
@@ -983,7 +1021,7 @@ const App = {
     S.ticket = null;
     const center = DATA.centers.find(c=>c.id===S.form.centerId);
     const vars = center ? center.variables : [];
-    S.form = {centerId:S.form.centerId, variableId: vars.length===1 ? vars[0].id : null, procIds:[]};
+    S.form = {centerId:S.form.centerId, variableId: vars.length===1 ? vars[0].id : null, procIds:[], patientName:'', patientCode:''};
     render();
   },
   openDetail(id){ S.detailReg = id; render(); },
@@ -1240,6 +1278,11 @@ const App = {
 
   openEdit(id){ S.editReg = id; render(); },
   closeEdit(){ S.editReg = null; render(); },
+  editSetPatientField(field,val){
+    const r = DATA.registrations.find(x=>x.id===S.editReg);
+    r[field] = val;
+    render();
+  },
   editSetVariable(vid){
     const r = DATA.registrations.find(x=>x.id===S.editReg);
     r.variableId = vid;

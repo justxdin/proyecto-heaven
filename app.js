@@ -3,16 +3,16 @@ const ICON = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABOYAAATmCAIAAAAKnjl9
 /* ---------------- MOCK DATA ---------------- */
 const DATA = {
   user:{name:'Dra. Valentina Rojas', initials:'VR'},
-  profile:{ nombre:'Valentina', apellido:'Rojas', calle:'', ciudad:'', cp:'', dni:'' },
+  profile:{ nombre:'Valentina', apellido:'Rojas', calle:'', ciudad:'', cp:'', nif:'', ivaIntra:'' },
   centers:[
     {id:'c1', name:'Clínica Dental Andes', active:true,
-      billing:{rep:'Dra. Valentina Rojas', street:'Calle Mayor 12', city:'Madrid', cp:'28013', cif:'B12345678'},
+      billing:{rep:'Dra. Valentina Rojas', street:'Calle Mayor 12', city:'Madrid', cp:'28013', cif:'B12345678', ivaIntra:''},
       variables:[{id:'v1', name:'Adulto', pct:35},{id:'v2', name:'Niño', pct:20}]},
     {id:'c2', name:'Hospital San Rafael', active:true,
-      billing:{rep:'Hospital San Rafael S.L.', street:'Av. de la Constitución 45', city:'Sevilla', cp:'41001', cif:'B87654321'},
+      billing:{rep:'Hospital San Rafael S.L.', street:'Av. de la Constitución 45', city:'Sevilla', cp:'41001', cif:'B87654321', ivaIntra:''},
       variables:[{id:'v1', name:'General', pct:30}]},
     {id:'c3', name:'Clínica Bellavista', active:true,
-      billing:{rep:'Clínica Bellavista S.L.', street:'Passeig de Gràcia 88', city:'Barcelona', cp:'08008', cif:'B11223344'},
+      billing:{rep:'Clínica Bellavista S.L.', street:'Passeig de Gràcia 88', city:'Barcelona', cp:'08008', cif:'B11223344', ivaIntra:''},
       variables:[{id:'v1', name:'Adulto', pct:40},{id:'v2', name:'Niño', pct:25},{id:'v3', name:'Anciano', pct:30}]},
   ],
   procedures:[
@@ -464,8 +464,9 @@ function centerCard(c, editing){
 
     <div class="section-label" style="margin-top:16px">Datos de facturación</div>
     <div class="form-grid">
-      <div class="f"><label>Representante</label><input id="edit-center-rep-${c.id}" value="${c.billing.rep}"/></div>
-      <div class="f"><label>CIF</label><input id="edit-center-cif-${c.id}" value="${c.billing.cif}"/></div>
+      <div class="f"><label>Razón social / Nombre</label><input id="edit-center-rep-${c.id}" value="${c.billing.rep}"/></div>
+      <div class="f"><label>NIF / Identificador fiscal</label><input id="edit-center-cif-${c.id}" value="${c.billing.cif}"/></div>
+      <div class="f"><label>IVA intracomunitario</label><input id="edit-center-ivaintra-${c.id}" placeholder="Ej: ESX1234567X" value="${c.billing.ivaIntra||''}"/></div>
       <div class="f"><label>Calle</label><input id="edit-center-street-${c.id}" value="${c.billing.street}"/></div>
       <div class="f"><label>Ciudad</label><input id="edit-center-city-${c.id}" value="${c.billing.city}"/></div>
       <div class="f"><label>Código postal</label><input id="edit-center-cp-${c.id}" value="${c.billing.cp}"/></div>
@@ -492,7 +493,8 @@ function centerCard(c, editing){
   <div class="center-card-head">
     <div>
       <div class="c-name">${c.name}</div>
-      <div class="c-sub">${c.billing.rep || 'Sin representante'} · ${c.billing.cif || 'sin CIF'}</div>
+      <div class="c-sub">${c.billing.rep || 'Sin razón social'} · ${c.billing.cif || 'sin NIF'}</div>
+      ${c.billing.ivaIntra ? `<div class="c-sub">IVA UE: ${c.billing.ivaIntra}</div>` : ''}
     </div>
     <button class="switch ${c.active?'on':''}" onclick="App.toggleCenterActive('${c.id}')"><span class="knob"></span></button>
   </div>
@@ -652,7 +654,7 @@ function adminPerfil(){
   }
   const d = S.profileDraft;
   return `
-  <div class="admin-head"><div><h1>Perfil</h1><p>Tus datos personales. Todos los campos son opcionales.</p></div></div>
+  <div class="admin-head"><div><h1>Perfil</h1><p>Tus datos personales. Los campos marcados se usan para generar tus facturas — todos son opcionales.</p></div></div>
   <div class="panel" style="padding:18px">
     <div class="form-grid">
       <div class="f"><label>Nombre</label><input value="${d.nombre}" onchange="App.setProfileField('nombre',this.value)"/></div>
@@ -660,8 +662,10 @@ function adminPerfil(){
       <div class="f"><label>Calle</label><input value="${d.calle}" onchange="App.setProfileField('calle',this.value)"/></div>
       <div class="f"><label>Ciudad</label><input value="${d.ciudad}" onchange="App.setProfileField('ciudad',this.value)"/></div>
       <div class="f"><label>Código postal</label><input value="${d.cp}" onchange="App.setProfileField('cp',this.value)"/></div>
-      <div class="f"><label>DNI</label><input value="${d.dni}" onchange="App.setProfileField('dni',this.value)"/></div>
+      <div class="f"><label>NIF / NIE / CIF</label><input value="${d.nif}" onchange="App.setProfileField('nif',this.value)"/></div>
+      <div class="f"><label>IVA intracomunitario (VIES)</label><input placeholder="Ej: ESX1234567X" value="${d.ivaIntra}" onchange="App.setProfileField('ivaIntra',this.value)"/></div>
     </div>
+    <p class="hint" style="padding:10px 0 0">El IVA intracomunitario solo es necesario si facturas a centros de otros países de la UE.</p>
     <div style="display:flex;align-items:center;gap:12px;padding-top:16px">
       <button class="btn-add" onclick="App.saveProfile()" ${S.profileDirty?'':'disabled'} style="${S.profileDirty?'':'opacity:.45;cursor:default'}">Guardar cambios</button>
       <span style="font-size:12.5px;color:${S.profileDirty?'var(--amber)':'var(--ink-faint)'}">
@@ -759,7 +763,7 @@ const App = {
     if(!name) return;
     const id = 'c'+(DATA.centers.length+1);
     DATA.centers.push({id, name, active:true,
-      billing:{rep:'', street:'', city:'', cp:'', cif:''},
+      billing:{rep:'', street:'', city:'', cp:'', cif:'', ivaIntra:''},
       variables:[]});
     DATA.procedures.forEach(p=>{ DATA.rates[id+'_'+p.id+'_unico']=0; });
     DATA.audit.push({ts:nowTs(), action:'creado', desc:`Centro creado: ${name}`});
@@ -792,6 +796,7 @@ const App = {
       city: document.getElementById('edit-center-city-'+id).value.trim(),
       cp: document.getElementById('edit-center-cp-'+id).value.trim(),
       cif: document.getElementById('edit-center-cif-'+id).value.trim(),
+      ivaIntra: document.getElementById('edit-center-ivaintra-'+id).value.trim(),
     };
     let maxIdx = 0;
     (S.editCenterVars||[]).forEach(v=>{

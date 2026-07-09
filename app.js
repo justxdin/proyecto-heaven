@@ -98,10 +98,10 @@ const S = {
   profileSaved:false,
 
   tarifaCenterId:'c1',
-  resumenCenterId:'all',
   resumenGroup:'dia',
-  resumenDateFrom:null,
-  resumenDateTo:null,
+  resumenDefaultApplied:false,
+  resumenDraft:{ centerId:'all', year:'all', month:'all', dateFrom:'', dateTo:'' },
+  resumenApplied:{ centerId:'all', year:'all', month:'all', dateFrom:'', dateTo:'' },
   registrosCenterId:'all',
   registrosMonth:'all',
   registrosDateFrom:null,
@@ -424,55 +424,105 @@ function segBtn(mode,label){
 
 function buildExportRows(){
   const active = DATA.registrations.filter(r=>!r.deleted);
-  const cid = S.resumenCenterId;
-  let rows = cid==='all' ? active : active.filter(r=>r.centerId===cid);
-  if(S.resumenDateFrom) rows = rows.filter(r=>r.date >= S.resumenDateFrom);
-  if(S.resumenDateTo) rows = rows.filter(r=>r.date <= S.resumenDateTo);
+  const f = S.resumenApplied;
+  let rows = f.centerId==='all' ? active : active.filter(r=>r.centerId===f.centerId);
+  if(f.year && f.year!=='all') rows = rows.filter(r=>r.date.slice(0,4)===f.year);
+  if(f.month && f.month!=='all') rows = rows.filter(r=>r.date.slice(5,7)===f.month);
+  if(f.dateFrom) rows = rows.filter(r=>r.date >= f.dateFrom);
+  if(f.dateTo) rows = rows.filter(r=>r.date <= f.dateTo);
   return [...rows].sort((a,b)=> a.date.localeCompare(b.date));
 }
 
 function exportFileName(ext){
-  const cid = S.resumenCenterId;
+  const cid = S.resumenApplied.centerId;
   const label = cid==='all' ? 'todos-los-centros' : centerName(cid).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
   const today = new Date().toISOString().slice(0,10);
   return `heaven-${label}-${today}.${ext}`;
 }
 
+const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+function availableYears(){
+  const set = new Set();
+  DATA.registrations.forEach(r=> set.add(r.date.slice(0,4)));
+  return [...set].sort().reverse();
+}
+
 function adminResumen(){
+  if(!S.resumenDefaultApplied){
+    const now = new Date();
+    const y = String(now.getFullYear());
+    const m = String(now.getMonth()+1).padStart(2,'0');
+    S.resumenDraft = { centerId:'all', year:y, month:m, dateFrom:'', dateTo:'' };
+    S.resumenApplied = { ...S.resumenDraft };
+    S.resumenDefaultApplied = true;
+  }
   const active = DATA.registrations.filter(r=>!r.deleted);
-  const cid = S.resumenCenterId;
-  let filtered = cid==='all' ? active : active.filter(r=>r.centerId===cid);
-  if(S.resumenDateFrom) filtered = filtered.filter(r=>r.date >= S.resumenDateFrom);
-  if(S.resumenDateTo) filtered = filtered.filter(r=>r.date <= S.resumenDateTo);
+  const f = S.resumenApplied;
+  const cid = f.centerId;
+
+  let dateFilteredActive = active;
+  if(f.year && f.year!=='all') dateFilteredActive = dateFilteredActive.filter(r=>r.date.slice(0,4)===f.year);
+  if(f.month && f.month!=='all') dateFilteredActive = dateFilteredActive.filter(r=>r.date.slice(5,7)===f.month);
+  if(f.dateFrom) dateFilteredActive = dateFilteredActive.filter(r=>r.date >= f.dateFrom);
+  if(f.dateTo) dateFilteredActive = dateFilteredActive.filter(r=>r.date <= f.dateTo);
+  const filtered = cid==='all' ? dateFilteredActive : dateFilteredActive.filter(r=>r.centerId===cid);
+
   const totalFact = filtered.reduce((s,r)=>s+r.total,0);
   const totalGanado = filtered.reduce((s,r)=>s+(r.earned||0),0);
   const byCenter = DATA.centers.map(c=>({
     id:c.id, name:c.name,
-    total: active.filter(r=>r.centerId===c.id).reduce((s,r)=>s+r.total,0),
-    earned: active.filter(r=>r.centerId===c.id).reduce((s,r)=>s+(r.earned||0),0),
+    total: dateFilteredActive.filter(r=>r.centerId===c.id).reduce((s,r)=>s+r.total,0),
+    earned: dateFilteredActive.filter(r=>r.centerId===c.id).reduce((s,r)=>s+(r.earned||0),0),
   }));
   const maxTotal = Math.max(1, ...byCenter.map(b=>b.total));
   const recent = [...filtered].reverse().slice(0,4);
   const grouped = groupRegs(filtered, S.resumenGroup);
   const maxGroup = Math.max(1, ...grouped.map(g=>g.total));
-  const hasDateFilter = S.resumenDateFrom || S.resumenDateTo;
+
+  const now = new Date();
+  const curYear = String(now.getFullYear());
+  const curMonth = String(now.getMonth()+1).padStart(2,'0');
+  const isCurrentMonth = f.year===curYear && f.month===curMonth && !f.dateFrom && !f.dateTo;
+  const hasAnyFilter = cid!=='all' || (f.year && f.year!=='all') || (f.month && f.month!=='all') || f.dateFrom || f.dateTo;
+  const subtitle = cid==='all'
+    ? (isCurrentMonth ? 'Vista general de la actividad registrada durante el mes actual.' : 'Vista general de la actividad registrada.')
+    : (isCurrentMonth ? `Actividad de ${centerName(cid)} durante el mes actual.` : `Actividad de ${centerName(cid)}.`);
+
+  const d = S.resumenDraft;
 
   return `
   <div class="admin-head">
-    <div><h1>Resumen</h1><p>${cid==='all' ? 'Vista general de la actividad registrada.' : 'Actividad de ' + centerName(cid) + '.'}</p></div>
+    <div><h1>Resumen</h1><p>${subtitle}</p></div>
   </div>
 
-  <div class="rate-select">
-    <select onchange="App.setResumenCenter(this.value)">
-      <option value="all" ${cid==='all'?'selected':''}>Todos los centros</option>
-      ${DATA.centers.map(c=>`<option value="${c.id}" ${c.id===cid?'selected':''}>${c.name}</option>`).join('')}
-    </select>
+  <div class="form-grid" style="margin-bottom:10px">
+    <div class="f"><label>Centro</label>
+      <select onchange="App.setResumenDraftField('centerId',this.value)">
+        <option value="all" ${d.centerId==='all'?'selected':''}>Todos los centros</option>
+        ${DATA.centers.map(c=>`<option value="${c.id}" ${c.id===d.centerId?'selected':''}>${c.name}</option>`).join('')}
+      </select>
+    </div>
+    <div class="f"><label>Año</label>
+      <select onchange="App.setResumenDraftField('year',this.value)">
+        <option value="all" ${d.year==='all'?'selected':''}>Todos los años</option>
+        ${availableYears().map(y=>`<option value="${y}" ${y===d.year?'selected':''}>${y}</option>`).join('')}
+      </select>
+    </div>
+    <div class="f"><label>Mes</label>
+      <select onchange="App.setResumenDraftField('month',this.value)">
+        <option value="all" ${d.month==='all'?'selected':''}>Todos los meses</option>
+        ${MONTH_NAMES.map((name,i)=>{ const v=String(i+1).padStart(2,'0'); return `<option value="${v}" ${v===d.month?'selected':''}>${name}</option>`; }).join('')}
+      </select>
+    </div>
   </div>
-
   <div class="date-filter">
-    <div class="f"><label>Desde</label><input type="date" value="${S.resumenDateFrom||''}" onchange="App.setResumenDateFrom(this.value)"/></div>
-    <div class="f"><label>Hasta</label><input type="date" value="${S.resumenDateTo||''}" onchange="App.setResumenDateTo(this.value)"/></div>
-    ${hasDateFilter ? `<button class="icon-btn" onclick="App.clearResumenDates()">Limpiar</button>` : ''}
+    <div class="f"><label>Desde</label><input type="date" value="${d.dateFrom||''}" onchange="App.setResumenDraftField('dateFrom',this.value)"/></div>
+    <div class="f"><label>Hasta</label><input type="date" value="${d.dateTo||''}" onchange="App.setResumenDraftField('dateTo',this.value)"/></div>
+  </div>
+  <div style="display:flex;gap:10px;margin:12px 0 22px">
+    <button class="btn-add" onclick="App.applyResumenFilter()">Filtrar</button>
+    ${hasAnyFilter ? `<button class="icon-btn" onclick="App.clearResumenFilter()">Limpiar filtros</button>` : ''}
   </div>
 
   <div class="export-btns">
@@ -493,7 +543,7 @@ function adminResumen(){
   <div class="panel">
     <div class="panel-title">Facturado y ganado por centro — toca uno para ver su historial</div>
     ${byCenter.map(b=>`
-      <button class="bar-row dual" style="width:100%;border:none;background:none;text-align:left;" onclick="App.setResumenCenter('${b.id}')">
+      <button class="bar-row dual" style="width:100%;border:none;background:none;text-align:left;" onclick="App.drillResumenCenter('${b.id}')">
         <div class="name">${b.name}</div>
         <div class="bar-track"><div class="bar-fill" style="width:${(b.total/maxTotal*100).toFixed(0)}%"></div></div>
         ${dualAmt(b.total, b.earned)}
@@ -1206,8 +1256,19 @@ const App = {
 
   setTarifaCenter(id){ S.tarifaCenterId = id; S.tarifaDraft = null; S.tarifaOpenProc = null; render(); },
   toggleTarifaProc(pid){ S.tarifaOpenProc = (S.tarifaOpenProc===pid ? null : pid); render(); },
-  setResumenCenter(id){ S.resumenCenterId = id; render(); },
   setResumenGroup(mode){ S.resumenGroup = mode; render(); },
+  setResumenDraftField(field,val){ S.resumenDraft[field] = val; render(); },
+  applyResumenFilter(){ S.resumenApplied = {...S.resumenDraft}; render(); },
+  clearResumenFilter(){
+    S.resumenDraft = { centerId:'all', year:'all', month:'all', dateFrom:'', dateTo:'' };
+    S.resumenApplied = {...S.resumenDraft};
+    render();
+  },
+  drillResumenCenter(id){
+    S.resumenDraft.centerId = id;
+    S.resumenApplied = {...S.resumenDraft};
+    render();
+  },
   setRegistrosCenter(id){ S.registrosCenterId = id; S.registrosPage = 1; render(); },
   setRegistrosMonth(m){ S.registrosMonth = m; S.registrosPage = 1; render(); },
   setRegistrosDateFrom(v){ S.registrosDateFrom = v || null; S.registrosPage = 1; render(); },
@@ -1224,9 +1285,6 @@ const App = {
     S.registrosPage = 1;
     render();
   },
-  setResumenDateFrom(val){ S.resumenDateFrom = val || null; render(); },
-  setResumenDateTo(val){ S.resumenDateTo = val || null; render(); },
-  clearResumenDates(){ S.resumenDateFrom = null; S.resumenDateTo = null; render(); },
   exportExcel(){
     const rows = buildExportRows();
     if(rows.length===0){ alert('No hay registros para exportar con estos filtros.'); return; }
@@ -1250,14 +1308,16 @@ const App = {
     if(rows.length===0){ alert('No hay registros para exportar con estos filtros.'); return; }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    const cid = S.resumenCenterId;
-    const title = cid==='all' ? 'Todos los centros' : centerName(cid);
+    const f = S.resumenApplied;
+    const title = f.centerId==='all' ? 'Todos los centros' : centerName(f.centerId);
     doc.setFontSize(14);
     doc.text(`Heaven — Resumen: ${title}`, 14, 16);
     doc.setFontSize(9);
-    const rangeText = (S.resumenDateFrom||S.resumenDateTo)
-      ? `Rango: ${S.resumenDateFrom||'inicio'} a ${S.resumenDateTo||'hoy'}`
-      : 'Todos los registros';
+    const parts = [];
+    if(f.year && f.year!=='all') parts.push(`Año ${f.year}`);
+    if(f.month && f.month!=='all') parts.push(MONTH_NAMES[parseInt(f.month,10)-1]);
+    if(f.dateFrom||f.dateTo) parts.push(`Rango: ${f.dateFrom||'inicio'} a ${f.dateTo||'hoy'}`);
+    const rangeText = parts.length ? parts.join(' · ') : 'Todos los registros';
     doc.setTextColor(120);
     doc.text(rangeText, 14, 22);
     doc.setTextColor(0);

@@ -81,7 +81,7 @@ const S = {
   resumenDateFrom:null,
   resumenDateTo:null,
 
-  facturaForm:{ centerId:'c1', numero:'', dateFrom:'', dateTo:'', ivaPct:0, retPct:'', notas:'' },
+  facturaForm:{ centerId:'c1', numero:'', dateFrom:'', dateTo:'', ivaPct:0, retPct:'', descripcion:'', notas:'' },
 };
 
 function money(n){ return new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n); }
@@ -667,8 +667,13 @@ function adminFacturacion(){
       <div class="f"><label>% Retención IRPF (opcional)</label><input class="rate-input" style="width:100%" value="${f.retPct}" onchange="App.setFacturaField('retPct',this.value)"/></div>
     </div>
     <div class="f" style="margin-top:10px">
-      <label>Notas adicionales / cláusulas legales</label>
-      <textarea rows="3" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;resize:vertical" onchange="App.setFacturaField('notas',this.value)">${f.notas}</textarea>
+      <label>Descripción del servicio</label>
+      <input style="width:100%" placeholder="Ej: Honorarios profesionales — periodo ${f.dateFrom && f.dateTo ? fmtDate(f.dateFrom)+' a '+fmtDate(f.dateTo) : '01/05/2026 a 31/05/2026'}" value="${f.descripcion}" onchange="App.setFacturaField('descripcion',this.value)"/>
+      <p class="hint" style="padding-top:4px">Si lo dejas vacío, se usa automáticamente "Honorarios profesionales — periodo [fechas]".</p>
+    </div>
+    <div class="f" style="margin-top:10px">
+      <label>Notas / mención legal de exención</label>
+      <textarea rows="3" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;resize:vertical" placeholder="Ej: Exento I.G.I.C. artículo 50 Ley 4/2012" onchange="App.setFacturaField('notas',this.value)">${f.notas}</textarea>
     </div>
 
     ${preview ? `
@@ -752,9 +757,11 @@ function buildInvoicePDF(inv){
   y += 14;
 
   doc.setFont('helvetica','bold'); doc.setFontSize(10);
-  doc.text(`HONORARIOS PROFESIONALES — PERIODO ${fmtDate(inv.dateFrom)} A ${fmtDate(inv.dateTo)}`, mx, y);
+  const descText = inv.descripcion || `Honorarios profesionales — periodo ${fmtDate(inv.dateFrom)} a ${fmtDate(inv.dateTo)}`;
+  const descLines = doc.splitTextToSize(descText.toUpperCase(), (pageRight-mx)-35);
+  doc.text(descLines, mx, y);
   doc.text(money(inv.base), pageRight, y, {align:'right'});
-  y += 12;
+  y += Math.max(descLines.length*5, 12);
 
   doc.setLineWidth(0.3); doc.line(mx, y, pageRight, y);
   y += 9;
@@ -1103,6 +1110,9 @@ const App = {
     const ivaAmount = Math.round(base*ivaPct/100);
     const retAmount = Math.round(base*retPct/100);
     const total = base + ivaAmount - retAmount;
+    const descripcion = (f.descripcion && f.descripcion.trim())
+      ? f.descripcion.trim()
+      : `Honorarios profesionales — periodo ${fmtDate(f.dateFrom)} a ${fmtDate(f.dateTo)}`;
     const inv = {
       id: 'f'+(DATA.invoices.length+1)+'-'+Date.now(),
       numero: f.numero.trim(),
@@ -1111,6 +1121,7 @@ const App = {
       dateTo: f.dateTo,
       issueDate: new Date().toISOString().slice(0,10),
       ivaPct, retPct, base, ivaAmount, retAmount, total,
+      descripcion,
       notas: f.notas || '',
     };
     DATA.invoices.push(inv);

@@ -77,6 +77,8 @@ const S = {
   tarifaCenterId:'c1',
   resumenCenterId:'all',
   resumenGroup:'dia',
+  resumenDateFrom:null,
+  resumenDateTo:null,
 };
 
 function money(n){ return new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n); }
@@ -355,10 +357,28 @@ function segBtn(mode,label){
   return `<button class="seg-btn ${S.resumenGroup===mode?'active':''}" onclick="App.setResumenGroup('${mode}')">${label}</button>`;
 }
 
+function buildExportRows(){
+  const active = DATA.registrations.filter(r=>!r.deleted);
+  const cid = S.resumenCenterId;
+  let rows = cid==='all' ? active : active.filter(r=>r.centerId===cid);
+  if(S.resumenDateFrom) rows = rows.filter(r=>r.date >= S.resumenDateFrom);
+  if(S.resumenDateTo) rows = rows.filter(r=>r.date <= S.resumenDateTo);
+  return [...rows].sort((a,b)=> a.date.localeCompare(b.date));
+}
+
+function exportFileName(ext){
+  const cid = S.resumenCenterId;
+  const label = cid==='all' ? 'todos-los-centros' : centerName(cid).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+  const today = new Date().toISOString().slice(0,10);
+  return `heaven-${label}-${today}.${ext}`;
+}
+
 function adminResumen(){
   const active = DATA.registrations.filter(r=>!r.deleted);
   const cid = S.resumenCenterId;
-  const filtered = cid==='all' ? active : active.filter(r=>r.centerId===cid);
+  let filtered = cid==='all' ? active : active.filter(r=>r.centerId===cid);
+  if(S.resumenDateFrom) filtered = filtered.filter(r=>r.date >= S.resumenDateFrom);
+  if(S.resumenDateTo) filtered = filtered.filter(r=>r.date <= S.resumenDateTo);
   const totalFact = filtered.reduce((s,r)=>s+r.total,0);
   const totalGanado = filtered.reduce((s,r)=>s+(r.earned||0),0);
   const byCenter = DATA.centers.map(c=>({
@@ -370,10 +390,15 @@ function adminResumen(){
   const recent = [...filtered].reverse().slice(0,4);
   const grouped = groupRegs(filtered, S.resumenGroup);
   const maxGroup = Math.max(1, ...grouped.map(g=>g.total));
+  const hasDateFilter = S.resumenDateFrom || S.resumenDateTo;
 
   return `
   <div class="admin-head">
     <div><h1>Resumen</h1><p>${cid==='all' ? 'Vista general de la actividad registrada.' : 'Actividad de ' + centerName(cid) + '.'}</p></div>
+    <div class="export-btns">
+      <button class="icon-btn" onclick="App.exportExcel()">⬇ Excel</button>
+      <button class="icon-btn" onclick="App.exportPDF()">⬇ PDF</button>
+    </div>
   </div>
 
   <div class="rate-select">
@@ -381,6 +406,12 @@ function adminResumen(){
       <option value="all" ${cid==='all'?'selected':''}>Todos los centros</option>
       ${DATA.centers.map(c=>`<option value="${c.id}" ${c.id===cid?'selected':''}>${c.name}</option>`).join('')}
     </select>
+  </div>
+
+  <div class="date-filter">
+    <div class="f"><label>Desde</label><input type="date" value="${S.resumenDateFrom||''}" onchange="App.setResumenDateFrom(this.value)"/></div>
+    <div class="f"><label>Hasta</label><input type="date" value="${S.resumenDateTo||''}" onchange="App.setResumenDateTo(this.value)"/></div>
+    ${hasDateFilter ? `<button class="icon-btn" onclick="App.clearResumenDates()">Limpiar</button>` : ''}
   </div>
 
   <div class="cards-row">
@@ -826,6 +857,62 @@ const App = {
   setTarifaCenter(id){ S.tarifaCenterId = id; S.tarifaDraft = null; render(); },
   setResumenCenter(id){ S.resumenCenterId = id; render(); },
   setResumenGroup(mode){ S.resumenGroup = mode; render(); },
+  setResumenDateFrom(val){ S.resumenDateFrom = val || null; render(); },
+  setResumenDateTo(val){ S.resumenDateTo = val || null; render(); },
+  clearResumenDates(){ S.resumenDateFrom = null; S.resumenDateTo = null; render(); },
+  exportExcel(){
+    const rows = buildExportRows();
+    if(rows.length===0){ alert('No hay registros para exportar con estos filtros.'); return; }
+    const data = rows.map(r=>({
+      Fecha: r.date,
+      Centro: centerName(r.centerId),
+      Paciente: variableName(r.centerId, r.variableId),
+      Procedimientos: r.procIds.map(procName).join(', '),
+      'Total facturado (€)': r.total,
+      'Ganancia (%)': r.profitPct,
+      'Ganancia (€)': r.earned,
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    ws['!cols'] = [{wch:12},{wch:22},{wch:14},{wch:30},{wch:16},{wch:12},{wch:14}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Registros');
+    XLSX.writeFile(wb, exportFileName('xlsx'));
+  },
+  exportPDF(){
+    const rows = buildExportRows();
+    if(rows.length===0){ alert('No hay registros para exportar con estos filtros.'); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const cid = S.resumenCenterId;
+    const title = cid==='all' ? 'Todos los centros' : centerName(cid);
+    doc.setFontSize(14);
+    doc.text(`Heaven — Resumen: ${title}`, 14, 16);
+    doc.setFontSize(9);
+    const rangeText = (S.resumenDateFrom||S.resumenDateTo)
+      ? `Rango: ${S.resumenDateFrom||'inicio'} a ${S.resumenDateTo||'hoy'}`
+      : 'Todos los registros';
+    doc.setTextColor(120);
+    doc.text(rangeText, 14, 22);
+    doc.setTextColor(0);
+
+    const body = rows.map(r=>[
+      fmtDate(r.date), centerName(r.centerId), variableName(r.centerId,r.variableId),
+      r.procIds.map(procName).join(', '), money(r.total), r.profitPct+'%', money(r.earned)
+    ]);
+    const totalFact = rows.reduce((s,r)=>s+r.total,0);
+    const totalGan = rows.reduce((s,r)=>s+(r.earned||0),0);
+
+    doc.autoTable({
+      startY: 28,
+      head: [['Fecha','Centro','Paciente','Procedimientos','Facturado','%','Ganancia']],
+      body,
+      foot: [['','','','Totales', money(totalFact), '', money(totalGan)]],
+      styles:{ fontSize:8, cellPadding:3 },
+      headStyles:{ fillColor:[22,35,43] },
+      footStyles:{ fillColor:[238,242,240], textColor:20, fontStyle:'bold' },
+    });
+    doc.save(exportFileName('pdf'));
+  },
   setProfileField(field,val){ S.profileDraft[field] = val; S.profileDirty = true; S.profileSaved = false; render(); },
   saveProfile(){
     DATA.profile = {...S.profileDraft};

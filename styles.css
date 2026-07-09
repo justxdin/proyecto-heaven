@@ -309,6 +309,11 @@
   .inline-form .chk{flex-direction:row;align-items:center;gap:7px;padding-bottom:9px;}
 
   .rate-select{margin-bottom:16px;}
+  .export-btns{display:flex;gap:8px;flex-shrink:0;}
+  .date-filter{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+  .date-filter .f{display:flex;flex-direction:column;gap:5px;}
+  .date-filter .f label{font-size:11px;color:var(--ink-faint);font-weight:600;text-transform:uppercase;letter-spacing:.03em;}
+  .date-filter .f input{padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;}
   .rate-select select{padding:9px 12px;border:1px solid var(--border);border-radius:9px;font-size:13.5px;background:var(--surface);}
   .rate-input{width:90px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-family:var(--mono);font-size:12.5px;text-align:right;}
   .hint{font-size:12px;color:var(--ink-faint);margin:10px 0 0;padding:0 18px 16px;}

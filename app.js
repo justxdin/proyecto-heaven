@@ -72,6 +72,7 @@ const S = {
   tarifaDraftCenter:null,
   tarifaDirty:false,
   tarifaSaved:false,
+  tarifaOpenProc:null,
   profileDraft:null,
   profileDirty:false,
   profileSaved:false,
@@ -81,11 +82,19 @@ const S = {
   resumenGroup:'dia',
   resumenDateFrom:null,
   resumenDateTo:null,
+  registrosCenterId:'all',
 
   facturaForm:{ centerId:'c1', numero:'', dateFrom:'', dateTo:'', ivaPct:0, retPct:'', descripcion:'', notas:'' },
+  facturasCenterId:'all',
 };
 
 function money(n){ return new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n); }
+function dualAmt(total, earned){
+  return `<div class="dual-amt">
+    <div class="dv"><span class="dv-lbl">Facturado</span><span class="dv-val">${money(total)}</span></div>
+    <div class="dv accent"><span class="dv-lbl">Ganado</span><span class="dv-val">${money(earned)}</span></div>
+  </div>`;
+}
 function nowTs(){ return new Date().toISOString().slice(0,16).replace('T',' '); }
 function centerName(id){ return DATA.centers.find(c=>c.id===id)?.name || '—'; }
 function procName(id){ return DATA.procedures.find(p=>p.id===id)?.name || '—'; }
@@ -306,10 +315,6 @@ function detailModal(){
 }
 
 /* ---------------- ADMIN ---------------- */
-const ADMIN_SCREEN_LABELS = {
-  resumen:'Resumen', centros:'Centros', procedimientos:'Procedimientos', tarifas:'Tarifas',
-  facturacion:'Facturación', registros:'Registros', auditoria:'Auditoría', perfil:'Perfil',
-};
 function adminScreen(){
   const screens = {
     resumen: adminResumen, centros: adminCentros, procedimientos: adminProcedimientos,
@@ -318,14 +323,20 @@ function adminScreen(){
   return `
   <div class="admin-wrap">
     <div class="mobile-topbar">
-      <button class="hamburger-btn" onclick="App.toggleMobileNav()" aria-label="Abrir menú">
-        <span class="bars"><span></span><span></span><span></span></span>
-      </button>
-      <div class="name">${ADMIN_SCREEN_LABELS[S.adminScreen] || 'Heaven'}</div>
+      <div class="mt-left">
+        <button class="hamburger-btn" style="font-size:17px;color:var(--ink)" onclick="App.goOperator()" title="Volver a la app" aria-label="Volver a la app">←</button>
+        <button class="mt-brand" onclick="App.setAdminScreen('resumen')"><div class="mark"><img src="${ICON}" alt="Heaven"/></div><div class="name">Heaven</div></button>
+      </div>
+      <div class="mt-actions">
+        <button class="gear-btn ${S.adminScreen==='perfil'?'active':''}" onclick="App.setAdminScreen('perfil')" title="Ajustes">⚙</button>
+        <button class="hamburger-btn" onclick="App.toggleMobileNav()" aria-label="Abrir menú">
+          <span class="bars"><span></span><span></span><span></span></span>
+        </button>
+      </div>
     </div>
     <div class="nav-backdrop ${S.mobileNavOpen?'open':''}" onclick="App.closeMobileNav()"></div>
     <div class="admin-side ${S.mobileNavOpen?'open':''}">
-      <div class="brand"><div class="mark"><img src="${ICON}" alt="Heaven"/></div><div class="name">Heaven</div></div>
+      <button class="brand" onclick="App.setAdminScreen('resumen')"><div class="mark"><img src="${ICON}" alt="Heaven"/></div><div class="name">Heaven</div></button>
       <div class="admin-nav">
         ${navBtn('resumen','Resumen')}
         ${navBtn('centros','Centros')}
@@ -411,10 +422,6 @@ function adminResumen(){
   return `
   <div class="admin-head">
     <div><h1>Resumen</h1><p>${cid==='all' ? 'Vista general de la actividad registrada.' : 'Actividad de ' + centerName(cid) + '.'}</p></div>
-    <div class="export-btns">
-      <button class="icon-btn" onclick="App.exportExcel()">⬇ Excel</button>
-      <button class="icon-btn" onclick="App.exportPDF()">⬇ PDF</button>
-    </div>
   </div>
 
   <div class="rate-select">
@@ -430,6 +437,11 @@ function adminResumen(){
     ${hasDateFilter ? `<button class="icon-btn" onclick="App.clearResumenDates()">Limpiar</button>` : ''}
   </div>
 
+  <div class="export-btns">
+    <button class="export-btn" onclick="App.exportExcel()"><span class="ico">⬇</span> Excel</button>
+    <button class="export-btn" onclick="App.exportPDF()"><span class="ico">⬇</span> PDF</button>
+  </div>
+
   <div class="cards-row">
     <div class="stat-card"><div class="lbl">Registros</div><div class="val">${filtered.length}</div></div>
     <div class="stat-card"><div class="lbl">Total facturado</div><div class="val">${money(totalFact)}</div></div>
@@ -443,10 +455,10 @@ function adminResumen(){
   <div class="panel">
     <div class="panel-title">Facturado y ganado por centro — toca uno para ver su historial</div>
     ${byCenter.map(b=>`
-      <button class="bar-row" style="width:100%;border:none;background:none;text-align:left;">
-        <div class="name" onclick="App.setResumenCenter('${b.id}')" style="cursor:pointer">${b.name}</div>
+      <button class="bar-row dual" style="width:100%;border:none;background:none;text-align:left;" onclick="App.setResumenCenter('${b.id}')">
+        <div class="name">${b.name}</div>
         <div class="bar-track"><div class="bar-fill" style="width:${(b.total/maxTotal*100).toFixed(0)}%"></div></div>
-        <div class="amt">${money(b.total)} <span style="color:var(--accent)">· ${money(b.earned)}</span></div>
+        ${dualAmt(b.total, b.earned)}
       </button>`).join('')}
   </div>` : `
   <div class="panel">
@@ -455,20 +467,19 @@ function adminResumen(){
       <div class="seg">${segBtn('dia','Día')}${segBtn('mes','Mes')}${segBtn('anio','Año')}</div>
     </div>
     ${grouped.length===0 ? `<div class="empty">Sin registros para este centro.</div>` : grouped.map(g=>`
-      <div class="bar-row">
+      <div class="bar-row dual">
         <div class="name">${periodLabel(g.key,S.resumenGroup)}</div>
         <div class="bar-track"><div class="bar-fill" style="width:${(g.total/maxGroup*100).toFixed(0)}%"></div></div>
-        <div class="amt">${money(g.total)} <span style="color:var(--accent)">· ${money(g.earned)}</span></div>
+        ${dualAmt(g.total, g.earned)}
       </div>`).join('')}
   </div>`}
 
   <div class="panel">
     <div class="panel-title">Últimos registros${cid==='all'?'':' — '+centerName(cid)}</div>
     ${recent.length===0 ? `<div class="empty">Sin registros.</div>` : recent.map(r=>`
-      <div class="bar-row">
-        <div class="name">${centerName(r.centerId)}</div>
-        <div class="bar-track" style="visibility:hidden"></div>
-        <div class="amt">${fmtDate(r.date)} · ${money(r.total)} <span style="color:var(--accent)">· ${money(r.earned)}</span></div>
+      <div class="bar-row dual">
+        <div class="name">${centerName(r.centerId)} <span style="font-weight:400;color:var(--ink-faint);font-size:11.5px">— ${fmtDate(r.date)}</span></div>
+        ${dualAmt(r.total, r.earned)}
       </div>`).join('')}
   </div>`;
 }
@@ -544,38 +555,72 @@ function adminCentros(){
   `;
 }
 
+function procCard(p, editing){
+  if(editing){
+    return `
+    <div class="f"><label>Nombre del procedimiento</label><input class="rate-input" style="width:100%;text-align:left" id="edit-proc-name-${p.id}" value="${p.name}"/></div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft);margin-top:14px">
+      <input type="checkbox" id="edit-proc-diff-${p.id}" ${p.diff?'checked':''}/> Diferencia activada
+    </label>
+    <div class="modal-actions" style="margin-top:16px">
+      <button onclick="App.cancelEditProc()">Cancelar</button>
+      <button class="primary" onclick="App.saveEditProc('${p.id}')">Guardar</button>
+    </div>`;
+  }
+  return `
+  <div class="center-card-head">
+    <div class="c-name">${p.name}</div>
+    ${p.diff ? '<span class="badge adulto">Activada</span>' : '<span class="badge" style="background:var(--surface-alt);color:var(--ink-faint)">Desactivada</span>'}
+  </div>
+  <button class="icon-btn" style="margin-top:10px" onclick="App.openEditProc('${p.id}')">Editar</button>`;
+}
+
 function adminProcedimientos(){
   return `
   <div class="admin-head">
     <div><h1>Procedimientos</h1><p>Catálogo de prestaciones. La diferencia se activa por variable definida en cada centro.</p></div>
     <button class="btn-add" onclick="App.toggleAddProc()">+ Agregar procedimiento</button>
   </div>
+  ${S.addProcOpen ? `
   <div class="panel">
-    ${S.addProcOpen ? `
     <div class="inline-form">
       <div class="f"><label>Nombre</label><input id="new-proc-name" placeholder="Ej: Sellante"/></div>
       <div class="f chk"><input type="checkbox" id="new-proc-diff"/><label style="text-transform:none;font-size:13px">Diferencia</label></div>
       <button class="icon-btn" onclick="App.addProc()">Guardar</button>
+    </div>
+  </div>` : ''}
+  ${DATA.procedures.map(p=>`<div class="panel" style="padding:18px">${procCard(p, S.editProcId===p.id)}</div>`).join('')}
+  <p class="hint" style="padding:0">Cuando está activada, la tarifa se define por cada variable que hayas creado en el centro (en la pantalla Tarifas).</p>
+  `;
+}
+
+function tarifaAccordionItem(p, variables, draft, isOpen){
+  const effectiveDiff = p.diff && variables.length>0;
+  const preview = effectiveDiff
+    ? variables.map(v=>`${v.name} ${money(draft[p.id+'_'+v.id])}`).join(' · ')
+    : money(draft[p.id+'_unico']);
+
+  return `
+  <div class="panel accordion-item">
+    <button class="accordion-head" onclick="App.toggleTarifaProc('${p.id}')">
+      <span class="ah-left">
+        <span class="ah-chevron ${isOpen?'open':''}">▸</span>
+        <span class="ah-name">${p.name}</span>
+      </span>
+      ${!isOpen ? `<span class="ah-preview">${preview}</span>` : ''}
+    </button>
+    ${isOpen ? `
+    <div class="accordion-body">
+      ${effectiveDiff ? variables.map(v=>`
+        <div class="var-value-row">
+          <span class="vv-lbl">${v.name}</span>
+          <input class="rate-input" style="width:120px" value="${draft[p.id+'_'+v.id]}" onchange="App.setDraftRate('${p.id}_${v.id}',this.value)"/>
+        </div>`).join('') : `
+        <div class="var-value-row">
+          <span class="vv-lbl">Valor</span>
+          <input class="rate-input" style="width:120px" value="${draft[p.id+'_unico']}" onchange="App.setDraftRate('${p.id}_unico',this.value)"/>
+        </div>`}
     </div>` : ''}
-    <div class="table-wrap"><table>
-      <thead><tr><th>Procedimiento</th><th>Diferencia</th><th>Acciones</th></tr></thead>
-      <tbody>
-        ${DATA.procedures.map(p=>`
-        <tr>
-          ${S.editProcId===p.id ? `
-          <td><input class="rate-input" style="width:100%;text-align:left" id="edit-proc-name-${p.id}" value="${p.name}"/></td>
-          <td><label style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-soft)"><input type="checkbox" id="edit-proc-diff-${p.id}" ${p.diff?'checked':''}/> Activada</label></td>
-          <td class="row-actions">
-            <button class="icon-btn" onclick="App.saveEditProc('${p.id}')">Guardar</button>
-            <button class="icon-btn" onclick="App.cancelEditProc()">Cancelar</button>
-          </td>` : `
-          <td style="font-weight:600">${p.name}</td>
-          <td>${p.diff ? '<span class="badge adulto">Activada</span>' : '<span class="badge" style="background:var(--surface-alt);color:var(--ink-faint)">Desactivada</span>'}</td>
-          <td class="row-actions"><button class="icon-btn" onclick="App.openEditProc('${p.id}')">Editar</button></td>`}
-        </tr>`).join('')}
-      </tbody>
-    </table></div>
-    <p class="hint">Cuando está activada, la tarifa se define por cada variable que hayas creado en el centro (en la pantalla Tarifas).</p>
   </div>`;
 }
 
@@ -588,6 +633,9 @@ function adminTarifas(){
     S.tarifaDraftCenter = cid;
     S.tarifaDirty = false;
   }
+  if(!S.tarifaOpenProc || !DATA.procedures.find(p=>p.id===S.tarifaOpenProc)){
+    S.tarifaOpenProc = DATA.procedures[0] ? DATA.procedures[0].id : null;
+  }
   const draft = S.tarifaDraft;
   return `
   <div class="admin-head"><div><h1>Tarifas</h1><p>Valor de cada procedimiento por centro y variable.</p></div></div>
@@ -599,58 +647,49 @@ function adminTarifas(){
   ${variables.length===0 ? `
   <div class="panel"><p class="hint" style="padding:16px 18px">Este centro no tiene variables definidas — todas las tarifas se guardan como valor único. Ve a Centros para agregar variables (Adulto, Niño, etc.).</p></div>
   ` : ''}
-  <div class="panel">
-    <div class="table-wrap"><table>
-      <thead><tr><th>Procedimiento</th>${variables.length===0 ? '<th>Valor</th>' : variables.map(v=>`<th>${v.name}</th>`).join('')}</tr></thead>
-      <tbody>
-        ${DATA.procedures.map(p=>{
-          const effectiveDiff = p.diff && variables.length>0;
-          if(effectiveDiff){
-            return `<tr>
-              <td style="font-weight:600">${p.name}</td>
-              ${variables.map(v=>`<td><input class="rate-input" value="${draft[p.id+'_'+v.id]}" onchange="App.setDraftRate('${p.id}_${v.id}',this.value)"/></td>`).join('')}
-            </tr>`;
-          }
-          return `<tr>
-            <td style="font-weight:600">${p.name}</td>
-            <td colspan="${Math.max(variables.length,1)}"><input class="rate-input" style="width:100%;text-align:left" value="${draft[p.id+'_unico']}" onchange="App.setDraftRate('${p.id}_unico',this.value)"/></td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table></div>
-    <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;border-top:1px solid var(--border)">
-      <button class="btn-add" onclick="App.saveTarifas()" ${S.tarifaDirty?'':'disabled'} style="${S.tarifaDirty?'':'opacity:.45;cursor:default'}">Guardar cambios</button>
-      <span style="font-size:12.5px;color:${S.tarifaDirty?'var(--amber)':'var(--ink-faint)'}">
-        ${S.tarifaDirty ? 'Tienes cambios sin guardar' : (S.tarifaSaved ? 'Guardado ✓' : 'Sin cambios pendientes')}
-      </span>
-    </div>
-    <p class="hint">Al guardar, los cambios rigen desde hoy. Los registros ya guardados conservan el valor que tenían al momento de crearse.</p>
-  </div>`;
+  ${DATA.procedures.map(p=>tarifaAccordionItem(p, variables, draft, S.tarifaOpenProc===p.id)).join('')}
+  <div class="panel" style="display:flex;align-items:center;gap:12px;padding:14px 18px;">
+    <button class="btn-add" onclick="App.saveTarifas()" ${S.tarifaDirty?'':'disabled'} style="${S.tarifaDirty?'':'opacity:.45;cursor:default'}">Guardar cambios</button>
+    <span style="font-size:12.5px;color:${S.tarifaDirty?'var(--amber)':'var(--ink-faint)'}">
+      ${S.tarifaDirty ? 'Tienes cambios sin guardar' : (S.tarifaSaved ? 'Guardado ✓' : 'Sin cambios pendientes')}
+    </span>
+  </div>
+  <p class="hint">Al guardar, los cambios rigen desde hoy. Los registros ya guardados conservan el valor que tenían al momento de crearse.</p>
+  `;
 }
 
 function adminRegistros(){
-  const regs = [...DATA.registrations].reverse();
+  const cid = S.registrosCenterId;
+  const regs = [...DATA.registrations].reverse().filter(r=> cid==='all' || r.centerId===cid);
   return `
   <div class="admin-head"><div><h1>Registros</h1><p>Todas las atenciones ingresadas, con edición y borrado auditado.</p></div></div>
+  <div class="rate-select">
+    <select onchange="App.setRegistrosCenter(this.value)">
+      <option value="all" ${cid==='all'?'selected':''}>Todos los centros</option>
+      ${DATA.centers.map(c=>`<option value="${c.id}" ${c.id===cid?'selected':''}>${c.name}</option>`).join('')}
+    </select>
+  </div>
   <div class="panel">
-    <div class="table-wrap"><table>
-      <thead><tr><th>Fecha</th><th>Centro</th><th>Paciente</th><th>Procedimientos</th><th>Total</th><th>Ganancia</th><th>Acciones</th></tr></thead>
+    ${regs.length===0 ? `<div class="empty">Sin registros para este filtro.</div>` : `
+    <div class="table-wrap responsive-table"><table>
+      <thead><tr><th>ID</th><th>Centro</th><th>Fecha</th><th>Paciente</th><th>Procedimientos</th><th>Total</th><th>Ganancia</th><th>Acciones</th></tr></thead>
       <tbody>
         ${regs.map(r=>`
         <tr class="${r.deleted?'eliminado':''}">
-          <td>${fmtDate(r.date)}</td>
-          <td>${centerName(r.centerId)}</td>
-          <td><span class="badge adulto">${variableName(r.centerId, r.variableId)}</span></td>
-          <td style="color:var(--ink-soft)">${r.procIds.map(procName).join(', ')}</td>
-          <td style="font-family:var(--mono)">${money(r.total)}</td>
-          <td style="font-family:var(--mono);color:var(--accent)">${money(r.earned)} <span style="color:var(--ink-faint);font-size:11px">(${r.profitPct}%)</span></td>
-          <td class="row-actions">
+          <td data-label="ID" style="order:0;font-family:var(--mono);color:var(--ink-faint)">#${r.id}</td>
+          <td data-label="Centro" style="order:1">${centerName(r.centerId)}</td>
+          <td data-label="Fecha" style="order:2">${fmtDate(r.date)}</td>
+          <td class="row-actions rt-actions" style="order:3">
             <button class="icon-btn" onclick="App.openEdit('${r.id}')" ${r.deleted?'disabled':''}>Editar</button>
             <button class="icon-btn danger" onclick="App.deleteReg('${r.id}')" ${r.deleted?'disabled':''}>Eliminar</button>
           </td>
+          <td data-label="Paciente" style="order:4"><span class="badge adulto">${variableName(r.centerId, r.variableId)}</span></td>
+          <td data-label="Procedimientos" style="order:5;color:var(--ink-soft)">${r.procIds.map(procName).join(', ')}</td>
+          <td data-label="Total" style="order:6;font-family:var(--mono)">${money(r.total)}</td>
+          <td data-label="Ganancia" style="order:7;font-family:var(--mono);color:var(--accent)">${money(r.earned)} <span style="color:var(--ink-faint);font-size:11px">(${r.profitPct}%)</span></td>
         </tr>`).join('')}
       </tbody>
-    </table></div>
+    </table></div>`}
   </div>`;
 }
 
@@ -667,7 +706,8 @@ function adminFacturacion(){
     const total = base + ivaAmount - retAmount;
     preview = { count: regs.length, base, ivaAmount, retAmount, total };
   }
-  const invoices = [...DATA.invoices].reverse();
+  const facCid = S.facturasCenterId;
+  const invoices = [...DATA.invoices].reverse().filter(inv=> facCid==='all' || inv.centerId===facCid);
 
   return `
   <div class="admin-head"><div><h1>Facturación</h1><p>Genera la factura de tus honorarios a cada centro.</p></div></div>
@@ -707,24 +747,31 @@ function adminFacturacion(){
     <button class="btn-add" style="margin-top:16px" onclick="App.generateFactura()">Generar factura (PDF)</button>
   </div>
 
-  <div class="panel">
-    <div class="panel-title">Facturas emitidas</div>
-    ${invoices.length===0 ? `<div class="empty">Todavía no generaste ninguna factura.</div>` : `
-    <div class="table-wrap"><table>
-      <thead><tr><th>Número</th><th>Centro</th><th>Periodo</th><th>Emitida</th><th>Total</th><th>Acciones</th></tr></thead>
-      <tbody>
-        ${invoices.map(inv=>`
-        <tr>
-          <td style="font-weight:600">${inv.numero}</td>
-          <td>${centerName(inv.centerId)}</td>
-          <td>${fmtDate(inv.dateFrom)} – ${fmtDate(inv.dateTo)}</td>
-          <td>${fmtDate(inv.issueDate)}</td>
-          <td style="font-family:var(--mono)">${money(inv.total)}</td>
-          <td class="row-actions"><button class="icon-btn" onclick="App.redownloadFactura('${inv.id}')">Descargar</button></td>
-        </tr>`).join('')}
-      </tbody>
-    </table></div>`}
-  </div>`;
+  <div class="admin-head" style="margin-bottom:14px"><div><h1 style="font-size:16px">Facturas emitidas</h1></div></div>
+  <div class="rate-select">
+    <select onchange="App.setFacturasCenter(this.value)">
+      <option value="all" ${facCid==='all'?'selected':''}>Todos los centros</option>
+      ${DATA.centers.map(c=>`<option value="${c.id}" ${c.id===facCid?'selected':''}>${c.name}</option>`).join('')}
+    </select>
+  </div>
+  ${invoices.length===0 ? `<div class="panel"><div class="empty">Sin facturas para este filtro.</div></div>` : invoices.map(inv=>`
+    <div class="panel" style="padding:16px 18px">
+      <div class="center-card-head">
+        <div>
+          <div class="c-name">${inv.numero}</div>
+          <div class="c-sub">${centerName(inv.centerId)} · ${fmtDate(inv.dateFrom)} – ${fmtDate(inv.dateTo)}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-family:var(--mono);font-weight:700;font-size:15px">${money(inv.total)}</div>
+          <div class="c-sub">Emitida ${fmtDate(inv.issueDate)}</div>
+        </div>
+      </div>
+      <div class="row-actions" style="margin-top:12px">
+        <button class="icon-btn" onclick="App.redownloadFactura('${inv.id}')" style="flex:1">⬇ Descargar</button>
+        <button class="icon-btn" onclick="App.emailFactura('${inv.id}')" style="flex:1">✉ Enviar por correo</button>
+      </div>
+    </div>`).join('')}
+  `;
 }
 
 function buildInvoicePDF(inv){
@@ -1054,9 +1101,11 @@ const App = {
     render();
   },
 
-  setTarifaCenter(id){ S.tarifaCenterId = id; S.tarifaDraft = null; render(); },
+  setTarifaCenter(id){ S.tarifaCenterId = id; S.tarifaDraft = null; S.tarifaOpenProc = null; render(); },
+  toggleTarifaProc(pid){ S.tarifaOpenProc = (S.tarifaOpenProc===pid ? null : pid); render(); },
   setResumenCenter(id){ S.resumenCenterId = id; render(); },
   setResumenGroup(mode){ S.resumenGroup = mode; render(); },
+  setRegistrosCenter(id){ S.registrosCenterId = id; render(); },
   setResumenDateFrom(val){ S.resumenDateFrom = val || null; render(); },
   setResumenDateTo(val){ S.resumenDateTo = val || null; render(); },
   clearResumenDates(){ S.resumenDateFrom = null; S.resumenDateTo = null; render(); },
@@ -1158,6 +1207,18 @@ const App = {
     if(!inv) return;
     const doc = buildInvoicePDF(inv);
     doc.save(`factura-${inv.numero.replace(/[^a-z0-9]+/gi,'-')}.pdf`);
+  },
+  setFacturasCenter(id){ S.facturasCenterId = id; render(); },
+  emailFactura(id){
+    const inv = DATA.invoices.find(x=>x.id===id);
+    if(!inv) return;
+    const doc = buildInvoicePDF(inv);
+    const filename = `factura-${inv.numero.replace(/[^a-z0-9]+/gi,'-')}.pdf`;
+    const centro = centerName(inv.centerId);
+    doc.save(filename);
+    const subject = encodeURIComponent(`Factura ${inv.numero}`);
+    const body = encodeURIComponent(`Adjunto la factura ${inv.numero} correspondiente a ${centro}, periodo ${fmtDate(inv.dateFrom)} a ${fmtDate(inv.dateTo)}.\n\nEl PDF se descargó a tu dispositivo — adjúntalo a este correo antes de enviarlo.`);
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
   },
   setDraftRate(key,val){
     const n = parseInt(val,10)||0;

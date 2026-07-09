@@ -103,6 +103,12 @@ const S = {
   resumenDateFrom:null,
   resumenDateTo:null,
   registrosCenterId:'all',
+  registrosMonth:'all',
+  registrosDateFrom:null,
+  registrosDateTo:null,
+  registrosSearch:'',
+  registrosPage:1,
+  registrosPageSize:20,
 
   facturaForm:{ centerId:'c1', numero:'', dateFrom:'', dateTo:'', ivaPct:0, retPct:'', descripcion:'', notas:'' },
   facturasCenterId:'all',
@@ -690,23 +696,69 @@ function adminTarifas(){
   `;
 }
 
+function availableMonths(){
+  const set = new Set();
+  DATA.registrations.forEach(r=> set.add(r.date.slice(0,7)));
+  return [...set].sort().reverse();
+}
+function monthLabel(ym){
+  const d = new Date(ym+'-01T00:00:00');
+  const s = d.toLocaleDateString('es-ES', {month:'long', year:'numeric'});
+  return s.charAt(0).toUpperCase()+s.slice(1);
+}
+
 function adminRegistros(){
   const cid = S.registrosCenterId;
-  const regs = [...DATA.registrations].reverse().filter(r=> cid==='all' || r.centerId===cid);
+  const month = S.registrosMonth;
+  const search = (S.registrosSearch||'').trim().toLowerCase();
+  let regs = [...DATA.registrations].reverse().filter(r=> cid==='all' || r.centerId===cid);
+  if(month && month!=='all') regs = regs.filter(r=> r.date.slice(0,7)===month);
+  if(S.registrosDateFrom) regs = regs.filter(r=> r.date >= S.registrosDateFrom);
+  if(S.registrosDateTo) regs = regs.filter(r=> r.date <= S.registrosDateTo);
+  if(search) regs = regs.filter(r=>
+    (r.patientName||'').toLowerCase().includes(search) ||
+    (r.patientCode||'').toLowerCase().includes(search));
+
+  const totalCount = regs.length;
+  const pageSize = S.registrosPageSize;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const page = Math.min(S.registrosPage, totalPages);
+  const pageRegs = regs.slice((page-1)*pageSize, page*pageSize);
+
   return `
   <div class="admin-head"><div><h1>Registros</h1><p>Todas las atenciones ingresadas, con edición y borrado auditado.</p></div></div>
+
   <div class="rate-select">
     <select onchange="App.setRegistrosCenter(this.value)">
       <option value="all" ${cid==='all'?'selected':''}>Todos los centros</option>
       ${DATA.centers.map(c=>`<option value="${c.id}" ${c.id===cid?'selected':''}>${c.name}</option>`).join('')}
     </select>
   </div>
+
+  <div class="form-grid" style="margin-bottom:14px">
+    <div class="f"><label>Mes</label>
+      <select onchange="App.setRegistrosMonth(this.value)">
+        <option value="all" ${month==='all'?'selected':''}>Todos los meses</option>
+        ${availableMonths().map(m=>`<option value="${m}" ${m===month?'selected':''}>${monthLabel(m)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="f"><label>Desde</label><input type="date" value="${S.registrosDateFrom||''}" onchange="App.setRegistrosDateFrom(this.value)"/></div>
+    <div class="f"><label>Hasta</label><input type="date" value="${S.registrosDateTo||''}" onchange="App.setRegistrosDateTo(this.value)"/></div>
+  </div>
+
+  <div class="f" style="margin-bottom:16px">
+    <label>Buscar paciente (nombre o código)</label>
+    <input placeholder="Ej: Marta Gómez o P-0231" value="${S.registrosSearch||''}" onchange="App.setRegistrosSearch(this.value)"/>
+  </div>
+  ${(cid!=='all'||month!=='all'||S.registrosDateFrom||S.registrosDateTo||search) ?
+    `<button class="icon-btn" style="margin-bottom:14px" onclick="App.clearRegistrosFilters()">Limpiar filtros</button>` : ''}
+
   <div class="panel">
     ${regs.length===0 ? `<div class="empty">Sin registros para este filtro.</div>` : `
     <div class="table-wrap responsive-table"><table>
       <thead><tr><th>ID</th><th>Centro</th><th>Fecha</th><th>Nombre</th><th>Código</th><th>Categoría</th><th>Procedimientos</th><th>Total</th><th>Ganancia</th><th>Acciones</th></tr></thead>
       <tbody>
-        ${regs.map(r=>`
+        ${pageRegs.map(r=>`
         <tr class="${r.deleted?'eliminado':''}">
           <td data-label="ID" style="order:0;font-family:var(--mono);color:var(--ink-faint)">#${r.id}</td>
           <td data-label="Centro" style="order:1">${centerName(r.centerId)}</td>
@@ -723,7 +775,20 @@ function adminRegistros(){
           <td data-label="Ganancia" style="order:9;font-family:var(--mono);color:var(--accent)">${money(r.earned)} <span style="color:var(--ink-faint);font-size:11px">(${r.profitPct}%)</span></td>
         </tr>`).join('')}
       </tbody>
-    </table></div>`}
+    </table></div>
+    <div class="pagination">
+      <div class="pg-size">
+        <label>Por página</label>
+        <select onchange="App.setRegistrosPageSize(this.value)">
+          ${[10,20,50].map(n=>`<option value="${n}" ${n===pageSize?'selected':''}>${n}</option>`).join('')}
+        </select>
+      </div>
+      <div class="pg-nav">
+        <button class="icon-btn" onclick="App.setRegistrosPage(${page-1})" ${page<=1?'disabled':''}>‹ Anterior</button>
+        <span class="pg-status">Página ${page} de ${totalPages} · ${totalCount} registro${totalCount===1?'':'s'}</span>
+        <button class="icon-btn" onclick="App.setRegistrosPage(${page+1})" ${page>=totalPages?'disabled':''}>Siguiente ›</button>
+      </div>
+    </div>`}
   </div>`;
 }
 
@@ -1143,7 +1208,22 @@ const App = {
   toggleTarifaProc(pid){ S.tarifaOpenProc = (S.tarifaOpenProc===pid ? null : pid); render(); },
   setResumenCenter(id){ S.resumenCenterId = id; render(); },
   setResumenGroup(mode){ S.resumenGroup = mode; render(); },
-  setRegistrosCenter(id){ S.registrosCenterId = id; render(); },
+  setRegistrosCenter(id){ S.registrosCenterId = id; S.registrosPage = 1; render(); },
+  setRegistrosMonth(m){ S.registrosMonth = m; S.registrosPage = 1; render(); },
+  setRegistrosDateFrom(v){ S.registrosDateFrom = v || null; S.registrosPage = 1; render(); },
+  setRegistrosDateTo(v){ S.registrosDateTo = v || null; S.registrosPage = 1; render(); },
+  setRegistrosSearch(v){ S.registrosSearch = v; S.registrosPage = 1; render(); },
+  setRegistrosPage(p){ S.registrosPage = Math.max(1, p); render(); },
+  setRegistrosPageSize(n){ S.registrosPageSize = parseInt(n,10)||20; S.registrosPage = 1; render(); },
+  clearRegistrosFilters(){
+    S.registrosCenterId = 'all';
+    S.registrosMonth = 'all';
+    S.registrosDateFrom = null;
+    S.registrosDateTo = null;
+    S.registrosSearch = '';
+    S.registrosPage = 1;
+    render();
+  },
   setResumenDateFrom(val){ S.resumenDateFrom = val || null; render(); },
   setResumenDateTo(val){ S.resumenDateTo = val || null; render(); },
   clearResumenDates(){ S.resumenDateFrom = null; S.resumenDateTo = null; render(); },

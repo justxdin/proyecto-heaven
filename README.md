@@ -18,7 +18,7 @@ Se puede abrir `index.html` directamente en el navegador, o publicarlo con GitHu
 
 **Settings → Pages → Deploy from branch → `main` → `/ (root)`**
 
-Queda disponible en `https://TU_USUARIO.github.io/heaven-prototipo/`
+Queda disponible en `https://justxdin.github.io/proyecto-heaven/`
 
 Los tres archivos deben estar en la misma carpeta. Los datos que se ven (centros, procedimientos, tarifas, ~23 registros de ejemplo repartidos entre junio y julio) son de prueba y viven en memoria del navegador: al recargar la página vuelven a su estado inicial.
 

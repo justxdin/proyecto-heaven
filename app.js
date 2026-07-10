@@ -102,6 +102,7 @@ const S = {
   resumenGroup:'dia',
   resumenDefaultApplied:false,
   resumenDraft:{ centerId:'all', year:'all', month:'all', dateFrom:'', dateTo:'' },
+  resumenFiltersOpen:false,
   resumenApplied:{ centerId:'all', year:'all', month:'all', dateFrom:'', dateTo:'' },
   registrosCenterId:'all',
   registrosMonth:'all',
@@ -110,6 +111,7 @@ const S = {
   registrosSearch:'',
   registrosPage:1,
   registrosPageSize:20,
+  registrosFiltersOpen:false,
 
   facturaForm:{ centerId:'c1', numero:'', dateFrom:'', dateTo:'', ivaPct:0, retPct:'', descripcion:'', notas:'', gastoDesc:'', gastoMonto:'' },
   facturasCenterId:'all',
@@ -120,6 +122,7 @@ function money(n){
   const locale = currency==='USD' ? 'en-US' : 'es-ES';
   return new Intl.NumberFormat(locale,{style:'currency',currency,maximumFractionDigits:0}).format(n);
 }
+function currencySymbol(){ return (DATA.profile.currency||'EUR')==='USD' ? 'US$' : '€'; }
 function dualAmt(total, earned){
   return `<div class="dual-amt">
     <div class="dv"><span class="dv-lbl">Facturado</span><span class="dv-val">${money(total)}</span></div>
@@ -127,6 +130,34 @@ function dualAmt(total, earned){
   </div>`;
 }
 function nowTs(){ return new Date().toISOString().slice(0,16).replace('T',' '); }
+/* ---------------- ICONOS SVG ---------------- */
+const ICON_PATHS = {
+  'arrow-left': '<path d="M19 12H5M5 12l7-7M5 12l7 7"/>',
+  'arrow-right': '<path d="M5 12h14M12 5l7 7-7 7"/>',
+  'grid': '<rect x="3" y="3" width="7.5" height="7.5" rx="1.2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.2"/>',
+  'filter': '<path d="M4 4.5h16l-6.2 7.4v6.1l-3.6 1.8v-7.9L4 4.5z"/>',
+  'chevron-right': '<path d="M9 6l6 6-6 6"/>',
+  'settings': '<circle cx="12" cy="12" r="3.2"/><path d="M12 2v3.5M12 18.5V22M4.9 4.9l2.5 2.5M16.6 16.6l2.5 2.5M2 12h3.5M18.5 12H22M4.9 19.1l2.5-2.5M16.6 7.4l2.5-2.5"/>',
+  'download': '<path d="M12 3v12M7.5 10.5L12 15l4.5-4.5M5 21h14"/>',
+  'mail': '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5L12 13l8.5-6.5"/>',
+  'edit': '<path d="M17.5 3.5a2.1 2.1 0 013 3L8 19l-4.5 1 1-4.5L17.5 3.5z"/>',
+  'trash': '<path d="M3.5 6h17M8.5 6V4.2A1.7 1.7 0 0110.2 2.5h3.6A1.7 1.7 0 0115.5 4.2V6m3 0l-.9 14a1.7 1.7 0 01-1.7 1.5H7.6A1.7 1.7 0 015.9 20L5 6h14z"/>',
+  'plus-circle': '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
+  'clock': '<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2.2"/>',
+  'bar-chart': '<path d="M4 20V11M12 20V4M20 20v-6.5"/><path d="M2 20h20"/>',
+  'building': '<rect x="4.5" y="3" width="15" height="18" rx="1"/><path d="M8.5 8h1M14.5 8h1M8.5 12h1M14.5 12h1M8.5 16h1M14.5 16h1"/>',
+  'clipboard': '<rect x="5" y="4.5" width="14" height="16.5" rx="2"/><path d="M9 3h6a1 1 0 011 1v1.5H8V4a1 1 0 011-1z"/><path d="M8.5 11h7M8.5 14.5h7M8.5 17.5h4"/>',
+  'tag': '<path d="M20.4 13.1L11.6 4.3a2 2 0 00-1.4-.6H5a1 1 0 00-1 1v5.2a2 2 0 00.6 1.4l8.8 8.8a2 2 0 002.8 0l4.2-4.2a2 2 0 000-2.8z"/><circle cx="7.7" cy="7.7" r="1.3"/>',
+  'receipt': '<path d="M6.5 2.5h8l5 5v14h-13z"/><path d="M14.5 2.5v5h5"/><path d="M9 13.5h6M9 17h6M9 9.5h2"/>',
+  'list': '<path d="M9 6.5h12M9 12h12M9 17.5h12"/><path d="M4 6.5h.01M4 12h.01M4 17.5h.01"/>',
+  'shield': '<path d="M12 2.5l7.5 3.5v5.5c0 4.6-3.2 7.4-7.5 9.5-4.3-2.1-7.5-4.9-7.5-9.5V6l7.5-3.5z"/><path d="M8.7 12l2.3 2.3 4.3-4.3"/>',
+};
+function icon(name, size){
+  const px = size || 16;
+  const path = ICON_PATHS[name] || '';
+  return `<svg width="${px}" height="${px}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;vertical-align:-3px">${path}</svg>`;
+}
+
 function centerName(id){ return DATA.centers.find(c=>c.id===id)?.name || '—'; }
 function centerDot(id){
   const c = DATA.centers.find(x=>x.id===id);
@@ -211,9 +242,9 @@ function operatorScreen(){
       ${S.opScreen==='registro' ? opRegistro() : opHistorial()}
       <div class="op-tabbar">
         <button class="op-tab ${S.opScreen==='registro'?'active':''}" onclick="App.setOpScreen('registro')">
-          <span class="dot"></span>Registrar</button>
+          ${icon('plus-circle',19)}<span>Registrar</span></button>
         <button class="op-tab ${S.opScreen==='historial'?'active':''}" onclick="App.setOpScreen('historial')">
-          <span class="dot"></span>Historial</button>
+          ${icon('clock',19)}<span>Historial</span></button>
       </div>
     </div>
   </div>
@@ -229,7 +260,7 @@ function opTopbar(){
       <div class="mark"><img src="${ICON}" alt="Heaven"/></div>
       <div class="name">Heaven</div>
     </div>
-    <button class="link-btn" onclick="App.goAdmin()">Panel admin →</button>
+    <button class="admin-link-btn" onclick="App.goAdmin()">${icon('grid',15)} Panel admin ${icon('arrow-right',14)}</button>
   </div>`;
 }
 
@@ -371,11 +402,11 @@ function adminScreen(){
   <div class="admin-wrap">
     <div class="mobile-topbar">
       <div class="mt-left">
-        <button class="hamburger-btn" style="font-size:17px;color:var(--ink)" onclick="App.goOperator()" title="Volver a la app" aria-label="Volver a la app">←</button>
+        <button class="hamburger-btn" style="color:var(--ink)" onclick="App.goOperator()" title="Volver a la app" aria-label="Volver a la app">${icon('arrow-left',18)}</button>
         <button class="mt-brand" onclick="App.setAdminScreen('resumen')"><div class="mark"><img src="${ICON}" alt="Heaven"/></div><div class="name">Heaven</div></button>
       </div>
       <div class="mt-actions">
-        <button class="gear-btn ${S.adminScreen==='perfil'?'active':''}" onclick="App.setAdminScreen('perfil')" title="Ajustes">⚙</button>
+        <button class="gear-btn ${S.adminScreen==='perfil'?'active':''}" onclick="App.setAdminScreen('perfil')" title="Ajustes">${icon('settings',17)}</button>
         <button class="hamburger-btn" onclick="App.toggleMobileNav()" aria-label="Abrir menú">
           <span class="bars"><span></span><span></span><span></span></span>
         </button>
@@ -394,8 +425,8 @@ function adminScreen(){
         ${navBtn('auditoria','Auditoría')}
       </div>
       <div class="side-footer">
-        <button class="gear-btn ${S.adminScreen==='perfil'?'active':''}" onclick="App.setAdminScreen('perfil')" title="Ajustes">⚙</button>
-        <button class="back" onclick="App.goOperator()">← Volver a la app</button>
+        <button class="gear-btn ${S.adminScreen==='perfil'?'active':''}" onclick="App.setAdminScreen('perfil')" title="Ajustes">${icon('settings',17)}</button>
+        <button class="back" onclick="App.goOperator()">${icon('arrow-left',14)} Volver a la app</button>
       </div>
     </div>
     <div class="admin-main">${screens[S.adminScreen]()}</div>
@@ -403,8 +434,12 @@ function adminScreen(){
   ${S.editReg ? editModal() : ''}
   `;
 }
+const NAV_ICONS = {
+  resumen:'bar-chart', centros:'building', procedimientos:'clipboard', tarifas:'tag',
+  facturacion:'receipt', registros:'list', auditoria:'shield',
+};
 function navBtn(key,label){
-  return `<button class="${S.adminScreen===key?'active':''}" onclick="App.setAdminScreen('${key}')">${label}</button>`;
+  return `<button class="${S.adminScreen===key?'active':''}" onclick="App.setAdminScreen('${key}')">${icon(NAV_ICONS[key],17)} ${label}</button>`;
 }
 
 function periodKey(dateStr, mode){
@@ -505,38 +540,46 @@ function adminResumen(){
     <div><h1>Resumen</h1><p>${subtitle}</p></div>
   </div>
 
-  <div class="form-grid" style="margin-bottom:10px">
-    <div class="f"><label>Centro</label>
-      <select onchange="App.setResumenDraftField('centerId',this.value)">
-        <option value="all" ${d.centerId==='all'?'selected':''}>Todos los centros</option>
-        ${DATA.centers.map(c=>`<option value="${c.id}" ${c.id===d.centerId?'selected':''}>${c.name}</option>`).join('')}
-      </select>
+  <button class="filters-toggle" onclick="App.toggleResumenFilters()">
+    ${icon('filter',16)} Filtros ${hasAnyFilter ? '<span class="filter-dot"></span>' : ''}
+    <span class="ft-chevron ${S.resumenFiltersOpen?'open':''}">${icon('chevron-right',14)}</span>
+  </button>
+  ${S.resumenFiltersOpen ? `
+  <div class="filters-panel">
+    <div class="form-grid">
+      <div class="f"><label>Centro</label>
+        <select onchange="App.setResumenDraftField('centerId',this.value)">
+          <option value="all" ${d.centerId==='all'?'selected':''}>Todos los centros</option>
+          ${DATA.centers.map(c=>`<option value="${c.id}" ${c.id===d.centerId?'selected':''}>${c.name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="f"><label>Año</label>
+        <select onchange="App.setResumenDraftField('year',this.value)">
+          <option value="all" ${d.year==='all'?'selected':''}>Todos los años</option>
+          ${availableYears().map(y=>`<option value="${y}" ${y===d.year?'selected':''}>${y}</option>`).join('')}
+        </select>
+      </div>
+      <div class="f"><label>Mes</label>
+        <select onchange="App.setResumenDraftField('month',this.value)">
+          <option value="all" ${d.month==='all'?'selected':''}>Todos los meses</option>
+          ${MONTH_NAMES.map((name,i)=>{ const v=String(i+1).padStart(2,'0'); return `<option value="${v}" ${v===d.month?'selected':''}>${name}</option>`; }).join('')}
+        </select>
+      </div>
     </div>
-    <div class="f"><label>Año</label>
-      <select onchange="App.setResumenDraftField('year',this.value)">
-        <option value="all" ${d.year==='all'?'selected':''}>Todos los años</option>
-        ${availableYears().map(y=>`<option value="${y}" ${y===d.year?'selected':''}>${y}</option>`).join('')}
-      </select>
+    <div class="date-filter">
+      <div class="f"><label>Desde</label><input type="date" value="${d.dateFrom||''}" onchange="App.setResumenDraftField('dateFrom',this.value)"/></div>
+      <div class="f"><label>Hasta</label><input type="date" value="${d.dateTo||''}" onchange="App.setResumenDraftField('dateTo',this.value)"/></div>
     </div>
-    <div class="f"><label>Mes</label>
-      <select onchange="App.setResumenDraftField('month',this.value)">
-        <option value="all" ${d.month==='all'?'selected':''}>Todos los meses</option>
-        ${MONTH_NAMES.map((name,i)=>{ const v=String(i+1).padStart(2,'0'); return `<option value="${v}" ${v===d.month?'selected':''}>${name}</option>`; }).join('')}
-      </select>
+    <p class="hint" style="padding:0 0 10px">Año/Mes y el rango de fechas son excluyentes — usar uno limpia el otro.</p>
+    <div style="display:flex;gap:10px">
+      <button class="btn-add" onclick="App.applyResumenFilter()">Filtrar</button>
+      ${hasAnyFilter ? `<button class="icon-btn" onclick="App.clearResumenFilter()">Limpiar filtros</button>` : ''}
     </div>
-  </div>
-  <div class="date-filter">
-    <div class="f"><label>Desde</label><input type="date" value="${d.dateFrom||''}" onchange="App.setResumenDraftField('dateFrom',this.value)"/></div>
-    <div class="f"><label>Hasta</label><input type="date" value="${d.dateTo||''}" onchange="App.setResumenDraftField('dateTo',this.value)"/></div>
-  </div>
-  <div style="display:flex;gap:10px;margin:12px 0 22px">
-    <button class="btn-add" onclick="App.applyResumenFilter()">Filtrar</button>
-    ${hasAnyFilter ? `<button class="icon-btn" onclick="App.clearResumenFilter()">Limpiar filtros</button>` : ''}
-  </div>
+  </div>` : ''}
 
   <div class="export-btns">
-    <button class="export-btn" onclick="App.exportExcel()"><span class="ico">⬇</span> Excel</button>
-    <button class="export-btn" onclick="App.exportPDF()"><span class="ico">⬇</span> PDF</button>
+    <button class="export-btn" onclick="App.exportExcel()">${icon('download',15)} Excel</button>
+    <button class="export-btn" onclick="App.exportPDF()">${icon('download',15)} PDF</button>
   </div>
 
   <div class="cards-row">
@@ -552,7 +595,7 @@ function adminResumen(){
   <div class="panel">
     <div class="panel-title">Facturado y ganado por centro — toca uno para ver su historial</div>
     ${byCenter.map(b=>`
-      <button class="bar-row dual" style="width:100%;border:none;background:none;text-align:left;" onclick="App.drillResumenCenter('${b.id}')">
+      <button class="bar-row dual ${centerColorClass(b.id)}" style="width:100%;border:none;text-align:left;" onclick="App.drillResumenCenter('${b.id}')">
         <div class="name"><span class="c-dot" style="background:${b.color||'#8B979A'}"></span>${b.name}</div>
         <div class="bar-track"><div class="bar-fill" style="width:${(b.total/maxTotal*100).toFixed(0)}%;background:${b.color||'var(--amber)'}"></div></div>
         ${dualAmt(b.total, b.earned)}
@@ -582,6 +625,12 @@ function adminResumen(){
 }
 
 const CENTER_COLORS = ['#3B6EA5','#7A5CB8','#C15B7A','#B8923C','#D97757','#5B5FA6','#4A7A82','#8B5E3C'];
+function centerColorClass(id){
+  const c = DATA.centers.find(x=>x.id===id);
+  if(!c || !c.color) return '';
+  const idx = CENTER_COLORS.indexOf(c.color);
+  return idx>=0 ? `ctint-${idx}` : '';
+}
 
 function centerCard(c, editing){
   if(editing){
@@ -590,6 +639,7 @@ function centerCard(c, editing){
     <div class="f"><label>Nombre del centro</label><input class="rate-input" style="width:100%;text-align:left" id="edit-center-name-${c.id}" value="${c.name}"/></div>
 
     <div class="section-label" style="margin-top:16px">Color identificador</div>
+    <p class="hint" style="padding:0 0 8px">Se usa para reconocer este centro de un vistazo en Registros, Resumen y Facturación — no afecta ningún cálculo, es solo visual.</p>
     <div class="color-swatches">
       ${CENTER_COLORS.map(hex=>`
         <button class="swatch ${selectedColor===hex?'selected':''}" style="background:${hex}" onclick="App.setEditCenterColor('${hex}')" title="${hex}"></button>`).join('')}
@@ -622,7 +672,7 @@ function centerCard(c, editing){
           <button class="icon-btn danger" onclick="App.removeCenterVariable(${idx})">×</button>
         </div>`).join('') || '<div class="empty" style="padding:14px 0">Sin variables. Agrega al menos una.</div>'}
     </div>
-    <button class="icon-btn" style="margin-top:8px" onclick="App.addCenterVariable()">+ Agregar variable</button>
+    <button class="icon-btn" style="margin-top:8px" onclick="App.addCenterVariable()">${icon('plus-circle',13)} Agregar variable</button>
 
     <div class="modal-actions" style="margin-top:18px">
       <button onclick="App.cancelEditCenter()">Cancelar</button>
@@ -640,14 +690,14 @@ function centerCard(c, editing){
   </div>
   <div class="c-row"><span class="c-k">Facturación</span><span class="c-v">${c.billing.street || '—'}, ${c.billing.city || '—'} ${c.billing.cp || ''}</span></div>
   <div class="c-row"><span class="c-k">Ganancia</span><span class="c-v" style="color:var(--accent);font-weight:600">${profitLabel(c)}</span></div>
-  <button class="icon-btn" style="margin-top:10px" onclick="App.openEditCenter('${c.id}')">Editar centro</button>`;
+  <button class="icon-btn" style="margin-top:10px" onclick="App.openEditCenter('${c.id}')">${icon('edit',13)} Editar centro</button>`;
 }
 
 function adminCentros(){
   return `
   <div class="admin-head">
     <div><h1>Centros</h1><p>Clínicas y hospitales, con su facturación y tu porcentaje de ganancia en cada uno.</p></div>
-    <button class="btn-add" onclick="App.toggleAddCenter()">+ Agregar centro</button>
+    <button class="btn-add" onclick="App.toggleAddCenter()">${icon('plus-circle',14)} Agregar centro</button>
   </div>
   ${S.addCenterOpen ? `
   <div class="panel">
@@ -678,14 +728,14 @@ function procCard(p, editing){
     <div class="c-name">${p.name}</div>
     ${p.diff ? '<span class="badge adulto">Activada</span>' : '<span class="badge" style="background:var(--surface-alt);color:var(--ink-faint)">Desactivada</span>'}
   </div>
-  <button class="icon-btn" style="margin-top:10px" onclick="App.openEditProc('${p.id}')">Editar</button>`;
+  <button class="icon-btn" style="margin-top:10px" onclick="App.openEditProc('${p.id}')">${icon('edit',13)} Editar</button>`;
 }
 
 function adminProcedimientos(){
   return `
   <div class="admin-head">
     <div><h1>Procedimientos</h1><p>Catálogo de prestaciones. La diferencia se activa por variable definida en cada centro.</p></div>
-    <button class="btn-add" onclick="App.toggleAddProc()">+ Agregar procedimiento</button>
+    <button class="btn-add" onclick="App.toggleAddProc()">${icon('plus-circle',14)} Agregar procedimiento</button>
   </div>
   ${S.addProcOpen ? `
   <div class="panel">
@@ -710,7 +760,7 @@ function tarifaAccordionItem(p, variables, draft, isOpen){
   <div class="panel accordion-item">
     <button class="accordion-head" onclick="App.toggleTarifaProc('${p.id}')">
       <span class="ah-left">
-        <span class="ah-chevron ${isOpen?'open':''}">▸</span>
+        <span class="ah-chevron ${isOpen?'open':''}">${icon('chevron-right',15)}</span>
         <span class="ah-name">${p.name}</span>
       </span>
       ${!isOpen ? `<span class="ah-preview">${preview}</span>` : ''}
@@ -793,54 +843,60 @@ function adminRegistros(){
   const page = Math.min(S.registrosPage, totalPages);
   const pageRegs = regs.slice((page-1)*pageSize, page*pageSize);
 
+  const hasAnyFilter = cid!=='all' || month!=='all' || S.registrosDateFrom || S.registrosDateTo || search;
+
   return `
   <div class="admin-head"><div><h1>Registros</h1><p>Todas las atenciones ingresadas, con edición y borrado auditado.</p></div></div>
 
-  <div class="rate-select">
-    <select onchange="App.setRegistrosCenter(this.value)">
-      <option value="all" ${cid==='all'?'selected':''}>Todos los centros</option>
-      ${DATA.centers.map(c=>`<option value="${c.id}" ${c.id===cid?'selected':''}>${c.name}</option>`).join('')}
-    </select>
-  </div>
-
-  <div class="form-grid" style="margin-bottom:14px">
-    <div class="f"><label>Mes</label>
-      <select onchange="App.setRegistrosMonth(this.value)">
-        <option value="all" ${month==='all'?'selected':''}>Todos los meses</option>
-        ${availableMonths().map(m=>`<option value="${m}" ${m===month?'selected':''}>${monthLabel(m)}</option>`).join('')}
+  <button class="filters-toggle" onclick="App.toggleRegistrosFilters()">
+    ${icon('filter',16)} Filtros ${hasAnyFilter ? '<span class="filter-dot"></span>' : ''}
+    <span class="ft-chevron ${S.registrosFiltersOpen?'open':''}">${icon('chevron-right',14)}</span>
+  </button>
+  ${S.registrosFiltersOpen ? `
+  <div class="filters-panel">
+    <div class="rate-select">
+      <select onchange="App.setRegistrosCenter(this.value)">
+        <option value="all" ${cid==='all'?'selected':''}>Todos los centros</option>
+        ${DATA.centers.map(c=>`<option value="${c.id}" ${c.id===cid?'selected':''}>${c.name}</option>`).join('')}
       </select>
     </div>
-    <div class="f"><label>Desde</label><input type="date" value="${S.registrosDateFrom||''}" onchange="App.setRegistrosDateFrom(this.value)"/></div>
-    <div class="f"><label>Hasta</label><input type="date" value="${S.registrosDateTo||''}" onchange="App.setRegistrosDateTo(this.value)"/></div>
-  </div>
 
-  <div class="f" style="margin-bottom:16px">
-    <label>Buscar paciente (nombre o código)</label>
-    <input placeholder="Ej: Marta Gómez o P-0231" value="${S.registrosSearch||''}" onchange="App.setRegistrosSearch(this.value)"/>
-  </div>
-  ${(cid!=='all'||month!=='all'||S.registrosDateFrom||S.registrosDateTo||search) ?
-    `<button class="icon-btn" style="margin-bottom:14px" onclick="App.clearRegistrosFilters()">Limpiar filtros</button>` : ''}
+    <div class="form-grid">
+      <div class="f"><label>Mes</label>
+        <select onchange="App.setRegistrosMonth(this.value)">
+          <option value="all" ${month==='all'?'selected':''}>Todos los meses</option>
+          ${availableMonths().map(m=>`<option value="${m}" ${m===month?'selected':''}>${monthLabel(m)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="f"><label>Desde</label><input type="date" value="${S.registrosDateFrom||''}" onchange="App.setRegistrosDateFrom(this.value)"/></div>
+      <div class="f"><label>Hasta</label><input type="date" value="${S.registrosDateTo||''}" onchange="App.setRegistrosDateTo(this.value)"/></div>
+    </div>
+    <p class="hint" style="padding:0 0 10px">Mes y el rango de fechas son excluyentes — usar uno limpia el otro.</p>
+
+    <div class="f">
+      <label>Buscar paciente (nombre o código)</label>
+      <input placeholder="Ej: Marta Gómez o P-0231" value="${S.registrosSearch||''}" onchange="App.setRegistrosSearch(this.value)"/>
+    </div>
+    ${hasAnyFilter ? `<button class="icon-btn" style="margin-top:4px" onclick="App.clearRegistrosFilters()">Limpiar filtros</button>` : ''}
+  </div>` : ''}
 
   <div class="panel">
     ${regs.length===0 ? `<div class="empty">Sin registros para este filtro.</div>` : `
     <div class="table-wrap responsive-table"><table>
-      <thead><tr><th>ID</th><th>Centro</th><th>Fecha</th><th>Nombre</th><th>Código</th><th>Categoría</th><th>Procedimientos</th><th>Total</th><th>Ganancia</th><th>Acciones</th></tr></thead>
+      <thead><tr><th>Centro</th><th>Fecha</th><th>Nombre</th><th>Código</th><th>Total</th><th>Ganancia</th><th>Acciones</th></tr></thead>
       <tbody>
         ${pageRegs.map(r=>`
-        <tr class="${r.deleted?'eliminado':''}">
-          <td data-label="ID" style="order:0;font-family:var(--mono);color:var(--ink-faint)">#${r.id}</td>
+        <tr class="${r.deleted?'eliminado':''} ${centerColorClass(r.centerId)}">
           <td data-label="Centro" style="order:1">${centerDot(r.centerId)}${centerName(r.centerId)}</td>
           <td data-label="Fecha" style="order:2">${fmtDate(r.date)}</td>
-          <td class="row-actions rt-actions" style="order:3">
-            <button class="icon-btn" onclick="App.openEdit('${r.id}')" ${r.deleted?'disabled':''}>Editar</button>
-            <button class="icon-btn danger" onclick="App.deleteReg('${r.id}')" ${r.deleted?'disabled':''}>Eliminar</button>
-          </td>
           <td data-label="Nombre" style="order:4">${r.patientName || '—'}</td>
           <td data-label="Código" style="order:5">${r.patientCode || '—'}</td>
-          <td data-label="Categoría" style="order:6"><span class="badge adulto">${variableName(r.centerId, r.variableId)}</span></td>
-          <td data-label="Procedimientos" style="order:7;color:var(--ink-soft)">${r.procIds.map(procName).join(', ')}</td>
           <td data-label="Total" style="order:8;font-family:var(--mono)">${money(r.total)}</td>
           <td data-label="Ganancia" style="order:9;font-family:var(--mono);color:var(--accent)">${money(r.earned)} <span style="color:var(--ink-faint);font-size:11px">(${r.profitPct}%)</span></td>
+          <td class="row-actions rt-actions" style="order:3">
+            <button class="icon-btn" onclick="App.openEdit('${r.id}')" ${r.deleted?'disabled':''}>${icon('edit',13)} Editar</button>
+            <button class="icon-btn danger" onclick="App.deleteReg('${r.id}')" ${r.deleted?'disabled':''}>${icon('trash',13)} Eliminar</button>
+          </td>
         </tr>`).join('')}
       </tbody>
     </table></div>
@@ -889,8 +945,8 @@ function adminFacturacion(){
         </select>
       </div>
       <div class="f"><label>Número de factura</label><input placeholder="Ej: 26/001" value="${f.numero}" onchange="App.setFacturaField('numero',this.value)"/></div>
-      <div class="f"><label>Fecha de operación — desde</label><input type="date" value="${f.dateFrom}" onchange="App.setFacturaField('dateFrom',this.value)"/></div>
-      <div class="f"><label>Fecha de operación — hasta</label><input type="date" value="${f.dateTo}" onchange="App.setFacturaField('dateTo',this.value)"/></div>
+      <div class="f"><label>Periodo — desde</label><input type="date" value="${f.dateFrom}" onchange="App.setFacturaField('dateFrom',this.value)"/></div>
+      <div class="f"><label>Periodo — hasta</label><input type="date" value="${f.dateTo}" onchange="App.setFacturaField('dateTo',this.value)"/></div>
       <div class="f"><label>% IVA</label><input class="rate-input" type="number" min="0" step="any" placeholder="Ej: 21" style="width:100%" value="${f.ivaPct}" onchange="App.setFacturaField('ivaPct',this.value)"/></div>
       <div class="f"><label>% Retención IRPF (opcional)</label><input class="rate-input" type="number" min="0" step="any" placeholder="Ej: 15" style="width:100%" value="${f.retPct}" onchange="App.setFacturaField('retPct',this.value)"/></div>
     </div>
@@ -934,7 +990,7 @@ function adminFacturacion(){
     </select>
   </div>
   ${invoices.length===0 ? `<div class="panel"><div class="empty">Sin facturas para este filtro.</div></div>` : invoices.map(inv=>`
-    <div class="panel" style="padding:16px 18px">
+    <div class="panel ${centerColorClass(inv.centerId)}" style="padding:16px 18px">
       <div class="center-card-head">
         <div>
           <div class="c-name">${inv.numero}</div>
@@ -946,8 +1002,8 @@ function adminFacturacion(){
         </div>
       </div>
       <div class="row-actions" style="margin-top:12px">
-        <button class="icon-btn" onclick="App.redownloadFactura('${inv.id}')" style="flex:1">⬇ Descargar</button>
-        <button class="icon-btn" onclick="App.emailFactura('${inv.id}')" style="flex:1">✉ Enviar por correo</button>
+        <button class="icon-btn" onclick="App.redownloadFactura('${inv.id}')" style="flex:1">${icon('download',14)} Descargar</button>
+        <button class="icon-btn" onclick="App.emailFactura('${inv.id}')" style="flex:1">${icon('mail',14)} Enviar por correo</button>
       </div>
     </div>`).join('')}
   `;
@@ -1120,7 +1176,7 @@ function editModal(){
   return `
   <div class="modal-overlay" onclick="if(event.target===this) App.closeEdit()">
     <div class="modal">
-      <h3>Editar registro</h3>
+      <h3>Editar registro <span style="font-weight:400;color:var(--ink-faint);font-size:12px;font-family:var(--mono)">#${r.id}</span></h3>
       <div class="f" style="margin-bottom:10px"><label>Nombre del paciente</label><input value="${r.patientName||''}" onchange="App.editSetPatientField('patientName',this.value)"/></div>
       <div class="f" style="margin-bottom:16px"><label>Código de paciente</label><input value="${r.patientCode||''}" onchange="App.editSetPatientField('patientCode',this.value)"/></div>
       <div class="section-label">Categoría de paciente</div>
@@ -1310,22 +1366,43 @@ const App = {
   setTarifaCenter(id){ S.tarifaCenterId = id; S.tarifaDraft = null; S.tarifaOpenProc = null; render(); },
   toggleTarifaProc(pid){ S.tarifaOpenProc = (S.tarifaOpenProc===pid ? null : pid); render(); },
   setResumenGroup(mode){ S.resumenGroup = mode; render(); },
-  setResumenDraftField(field,val){ S.resumenDraft[field] = val; render(); },
+  setResumenDraftField(field,val){
+    S.resumenDraft[field] = val;
+    if((field==='year' || field==='month') && val && val!=='all'){
+      S.resumenDraft.dateFrom = ''; S.resumenDraft.dateTo = '';
+    } else if((field==='dateFrom' || field==='dateTo') && val){
+      S.resumenDraft.year = 'all'; S.resumenDraft.month = 'all';
+    }
+    render();
+  },
   applyResumenFilter(){ S.resumenApplied = {...S.resumenDraft}; render(); },
   clearResumenFilter(){
     S.resumenDraft = { centerId:'all', year:'all', month:'all', dateFrom:'', dateTo:'' };
     S.resumenApplied = {...S.resumenDraft};
     render();
   },
+  toggleResumenFilters(){ S.resumenFiltersOpen = !S.resumenFiltersOpen; render(); },
   drillResumenCenter(id){
     S.resumenDraft.centerId = id;
     S.resumenApplied = {...S.resumenDraft};
     render();
   },
   setRegistrosCenter(id){ S.registrosCenterId = id; S.registrosPage = 1; render(); },
-  setRegistrosMonth(m){ S.registrosMonth = m; S.registrosPage = 1; render(); },
-  setRegistrosDateFrom(v){ S.registrosDateFrom = v || null; S.registrosPage = 1; render(); },
-  setRegistrosDateTo(v){ S.registrosDateTo = v || null; S.registrosPage = 1; render(); },
+  setRegistrosMonth(m){
+    S.registrosMonth = m;
+    if(m && m!=='all'){ S.registrosDateFrom = null; S.registrosDateTo = null; }
+    S.registrosPage = 1; render();
+  },
+  setRegistrosDateFrom(v){
+    S.registrosDateFrom = v || null;
+    if(v){ S.registrosMonth = 'all'; }
+    S.registrosPage = 1; render();
+  },
+  setRegistrosDateTo(v){
+    S.registrosDateTo = v || null;
+    if(v){ S.registrosMonth = 'all'; }
+    S.registrosPage = 1; render();
+  },
   setRegistrosSearch(v){ S.registrosSearch = v; S.registrosPage = 1; render(); },
   setRegistrosPage(p){ S.registrosPage = Math.max(1, p); render(); },
   setRegistrosPageSize(n){ S.registrosPageSize = parseInt(n,10)||20; S.registrosPage = 1; render(); },
@@ -1338,20 +1415,24 @@ const App = {
     S.registrosPage = 1;
     render();
   },
+  toggleRegistrosFilters(){ S.registrosFiltersOpen = !S.registrosFiltersOpen; render(); },
   exportExcel(){
     const rows = buildExportRows();
     if(rows.length===0){ alert('No hay registros para exportar con estos filtros.'); return; }
+    const cs = currencySymbol();
     const data = rows.map(r=>({
       Fecha: r.date,
       Centro: centerName(r.centerId),
-      Paciente: variableName(r.centerId, r.variableId),
+      'Nombre paciente': r.patientName || '',
+      'Código paciente': r.patientCode || '',
+      Categoría: variableName(r.centerId, r.variableId),
       Procedimientos: r.procIds.map(procName).join(', '),
-      'Total facturado (€)': r.total,
+      [`Total facturado (${cs})`]: r.total,
       'Ganancia (%)': r.profitPct,
-      'Ganancia (€)': r.earned,
+      [`Ganancia (${cs})`]: r.earned,
     }));
     const ws = XLSX.utils.json_to_sheet(data);
-    ws['!cols'] = [{wch:12},{wch:22},{wch:14},{wch:30},{wch:16},{wch:12},{wch:14}];
+    ws['!cols'] = [{wch:12},{wch:22},{wch:18},{wch:14},{wch:14},{wch:30},{wch:16},{wch:12},{wch:14}];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Registros');
     XLSX.writeFile(wb, exportFileName('xlsx'));
@@ -1376,7 +1457,7 @@ const App = {
     doc.setTextColor(0);
 
     const body = rows.map(r=>[
-      fmtDate(r.date), centerName(r.centerId), variableName(r.centerId,r.variableId),
+      fmtDate(r.date), centerName(r.centerId), r.patientName||'', r.patientCode||'', variableName(r.centerId,r.variableId),
       r.procIds.map(procName).join(', '), money(r.total), r.profitPct+'%', money(r.earned)
     ]);
     const totalFact = rows.reduce((s,r)=>s+r.total,0);
@@ -1384,9 +1465,9 @@ const App = {
 
     doc.autoTable({
       startY: 28,
-      head: [['Fecha','Centro','Paciente','Procedimientos','Facturado','%','Ganancia']],
+      head: [['Fecha','Centro','Nombre','Código','Categoría','Procedimientos','Facturado','%','Ganancia']],
       body,
-      foot: [['','','','Totales', money(totalFact), '', money(totalGan)]],
+      foot: [['','','','','','Totales', money(totalFact), '', money(totalGan)]],
       styles:{ fontSize:8, cellPadding:3 },
       headStyles:{ fillColor:[22,35,43] },
       footStyles:{ fillColor:[238,242,240], textColor:20, fontStyle:'bold' },

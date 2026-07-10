@@ -3,15 +3,15 @@ const ICON = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABOYAAATmCAIAAAAKnjl9
 /* ---------------- MOCK DATA ---------------- */
 const DATA = {
   user:{name:'Dra. Valentina Rojas', initials:'VR'},
-  profile:{ nombre:'Valentina', apellido:'Rojas', calle:'', ciudad:'', cp:'', nif:'', ivaIntra:'' },
+  profile:{ nombre:'Valentina', apellido:'Rojas', calle:'', ciudad:'', cp:'', nif:'', ivaIntra:'', currency:'EUR' },
   centers:[
-    {id:'c1', name:'Clínica Dental Andes', active:true,
+    {id:'c1', name:'Clínica Dental Andes', active:true, color:'#3B6EA5',
       billing:{rep:'Dra. Valentina Rojas', street:'Calle Mayor 12', city:'Madrid', cp:'28013', taxIdType:'CIF', taxId:'B12345678', ivaIntra:''},
       variables:[{id:'v1', name:'Adulto', pct:35},{id:'v2', name:'Niño', pct:20}]},
-    {id:'c2', name:'Hospital San Rafael', active:true,
+    {id:'c2', name:'Hospital San Rafael', active:true, color:'#7A5CB8',
       billing:{rep:'Hospital San Rafael S.L.', street:'Av. de la Constitución 45', city:'Sevilla', cp:'41001', taxIdType:'CIF', taxId:'B87654321', ivaIntra:''},
       variables:[{id:'v1', name:'General', pct:30}]},
-    {id:'c3', name:'Clínica Bellavista', active:true,
+    {id:'c3', name:'Clínica Bellavista', active:true, color:'#C15B7A',
       billing:{rep:'Clínica Bellavista S.L.', street:'Passeig de Gràcia 88', city:'Barcelona', cp:'08008', taxIdType:'CIF', taxId:'B11223344', ivaIntra:''},
       variables:[{id:'v1', name:'Adulto', pct:40},{id:'v2', name:'Niño', pct:25},{id:'v3', name:'Anciano', pct:30}]},
   ],
@@ -87,6 +87,7 @@ const S = {
   addProcOpen:false,
   editCenterId:null,
   editCenterVars:null,
+  editCenterColor:null,
   editProcId:null,
   tarifaDraft:null,
   tarifaDraftCenter:null,
@@ -110,11 +111,15 @@ const S = {
   registrosPage:1,
   registrosPageSize:20,
 
-  facturaForm:{ centerId:'c1', numero:'', dateFrom:'', dateTo:'', ivaPct:0, retPct:'', descripcion:'', notas:'' },
+  facturaForm:{ centerId:'c1', numero:'', dateFrom:'', dateTo:'', ivaPct:0, retPct:'', descripcion:'', notas:'', gastoDesc:'', gastoMonto:'' },
   facturasCenterId:'all',
 };
 
-function money(n){ return new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n); }
+function money(n){
+  const currency = DATA.profile.currency || 'EUR';
+  const locale = currency==='USD' ? 'en-US' : 'es-ES';
+  return new Intl.NumberFormat(locale,{style:'currency',currency,maximumFractionDigits:0}).format(n);
+}
 function dualAmt(total, earned){
   return `<div class="dual-amt">
     <div class="dv"><span class="dv-lbl">Facturado</span><span class="dv-val">${money(total)}</span></div>
@@ -123,6 +128,10 @@ function dualAmt(total, earned){
 }
 function nowTs(){ return new Date().toISOString().slice(0,16).replace('T',' '); }
 function centerName(id){ return DATA.centers.find(c=>c.id===id)?.name || '—'; }
+function centerDot(id){
+  const c = DATA.centers.find(x=>x.id===id);
+  return `<span class="c-dot" style="background:${c && c.color || '#8B979A'}"></span>`;
+}
 function procName(id){ return DATA.procedures.find(p=>p.id===id)?.name || '—'; }
 function fmtDate(d){
   const dt = new Date(d+'T00:00:00');
@@ -240,7 +249,7 @@ function opRegistro(){
     <div class="section-label">Centro</div>
     <div class="chip-row">
       ${DATA.centers.map(c=>`
-        <button class="chip ${f.centerId===c.id?'selected':''}" onclick="App.setCenter('${c.id}')">${c.name}</button>
+        <button class="chip ${f.centerId===c.id?'selected':''}" style="${f.centerId===c.id ? `background:${c.color};border-color:${c.color};color:#fff;` : ''}" onclick="App.setCenter('${c.id}')">${c.name}</button>
       `).join('')}
     </div>
 
@@ -471,7 +480,7 @@ function adminResumen(){
   const totalFact = filtered.reduce((s,r)=>s+r.total,0);
   const totalGanado = filtered.reduce((s,r)=>s+(r.earned||0),0);
   const byCenter = DATA.centers.map(c=>({
-    id:c.id, name:c.name,
+    id:c.id, name:c.name, color:c.color,
     total: dateFilteredActive.filter(r=>r.centerId===c.id).reduce((s,r)=>s+r.total,0),
     earned: dateFilteredActive.filter(r=>r.centerId===c.id).reduce((s,r)=>s+(r.earned||0),0),
   }));
@@ -544,8 +553,8 @@ function adminResumen(){
     <div class="panel-title">Facturado y ganado por centro — toca uno para ver su historial</div>
     ${byCenter.map(b=>`
       <button class="bar-row dual" style="width:100%;border:none;background:none;text-align:left;" onclick="App.drillResumenCenter('${b.id}')">
-        <div class="name">${b.name}</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${(b.total/maxTotal*100).toFixed(0)}%"></div></div>
+        <div class="name"><span class="c-dot" style="background:${b.color||'#8B979A'}"></span>${b.name}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${(b.total/maxTotal*100).toFixed(0)}%;background:${b.color||'var(--amber)'}"></div></div>
         ${dualAmt(b.total, b.earned)}
       </button>`).join('')}
   </div>` : `
@@ -572,10 +581,19 @@ function adminResumen(){
   </div>`;
 }
 
+const CENTER_COLORS = ['#3B6EA5','#7A5CB8','#C15B7A','#B8923C','#D97757','#5B5FA6','#4A7A82','#8B5E3C'];
+
 function centerCard(c, editing){
   if(editing){
+    const selectedColor = S.editCenterColor || c.color || CENTER_COLORS[0];
     return `
     <div class="f"><label>Nombre del centro</label><input class="rate-input" style="width:100%;text-align:left" id="edit-center-name-${c.id}" value="${c.name}"/></div>
+
+    <div class="section-label" style="margin-top:16px">Color identificador</div>
+    <div class="color-swatches">
+      ${CENTER_COLORS.map(hex=>`
+        <button class="swatch ${selectedColor===hex?'selected':''}" style="background:${hex}" onclick="App.setEditCenterColor('${hex}')" title="${hex}"></button>`).join('')}
+    </div>
 
     <div class="section-label" style="margin-top:16px">Datos de facturación</div>
     <div class="form-grid">
@@ -600,7 +618,7 @@ function centerCard(c, editing){
       ${(S.editCenterVars||[]).map((v,idx)=>`
         <div class="var-row">
           <input placeholder="Nombre (ej. Adulto)" value="${v.name}" onchange="App.setCenterVarField(${idx},'name',this.value)"/>
-          <input class="rate-input" style="width:70px" value="${v.pct}" onchange="App.setCenterVarField(${idx},'pct',this.value)"/><span style="font-size:13px;color:var(--ink-faint)">%</span>
+          <input class="rate-input" type="number" min="0" max="100" step="any" placeholder="Ej: 35" style="width:70px" value="${v.pct}" onchange="App.setCenterVarField(${idx},'pct',this.value)"/><span style="font-size:13px;color:var(--ink-faint)">%</span>
           <button class="icon-btn danger" onclick="App.removeCenterVariable(${idx})">×</button>
         </div>`).join('') || '<div class="empty" style="padding:14px 0">Sin variables. Agrega al menos una.</div>'}
     </div>
@@ -614,7 +632,7 @@ function centerCard(c, editing){
   return `
   <div class="center-card-head">
     <div>
-      <div class="c-name">${c.name}</div>
+      <div class="c-name"><span class="c-dot" style="background:${c.color||'#8B979A'}"></span>${c.name}</div>
       <div class="c-sub">${c.billing.rep || 'Sin razón social'} · ${c.billing.taxId ? (c.billing.taxIdType+': '+c.billing.taxId) : 'sin NIF/CIF'}</div>
       ${c.billing.ivaIntra ? `<div class="c-sub">IVA UE: ${c.billing.ivaIntra}</div>` : ''}
     </div>
@@ -702,11 +720,11 @@ function tarifaAccordionItem(p, variables, draft, isOpen){
       ${effectiveDiff ? variables.map(v=>`
         <div class="var-value-row">
           <span class="vv-lbl">${v.name}</span>
-          <input class="rate-input" style="width:120px" value="${draft[p.id+'_'+v.id]}" onchange="App.setDraftRate('${p.id}_${v.id}',this.value)"/>
+          <input class="rate-input" type="number" min="0" step="1" placeholder="Ej: 45" style="width:120px" value="${draft[p.id+'_'+v.id]}" onchange="App.setDraftRate('${p.id}_${v.id}',this.value)"/>
         </div>`).join('') : `
         <div class="var-value-row">
           <span class="vv-lbl">Valor</span>
-          <input class="rate-input" style="width:120px" value="${draft[p.id+'_unico']}" onchange="App.setDraftRate('${p.id}_unico',this.value)"/>
+          <input class="rate-input" type="number" min="0" step="1" placeholder="Ej: 45" style="width:120px" value="${draft[p.id+'_unico']}" onchange="App.setDraftRate('${p.id}_unico',this.value)"/>
         </div>`}
     </div>` : ''}
   </div>`;
@@ -811,7 +829,7 @@ function adminRegistros(){
         ${pageRegs.map(r=>`
         <tr class="${r.deleted?'eliminado':''}">
           <td data-label="ID" style="order:0;font-family:var(--mono);color:var(--ink-faint)">#${r.id}</td>
-          <td data-label="Centro" style="order:1">${centerName(r.centerId)}</td>
+          <td data-label="Centro" style="order:1">${centerDot(r.centerId)}${centerName(r.centerId)}</td>
           <td data-label="Fecha" style="order:2">${fmtDate(r.date)}</td>
           <td class="row-actions rt-actions" style="order:3">
             <button class="icon-btn" onclick="App.openEdit('${r.id}')" ${r.deleted?'disabled':''}>Editar</button>
@@ -847,13 +865,15 @@ function adminFacturacion(){
   let preview = null;
   if(f.centerId && f.dateFrom && f.dateTo){
     const regs = DATA.registrations.filter(r=>!r.deleted && r.centerId===f.centerId && r.date>=f.dateFrom && r.date<=f.dateTo);
-    const base = regs.reduce((s,r)=>s+(r.earned||0),0);
+    const honorarios = regs.reduce((s,r)=>s+(r.earned||0),0);
+    const gastoMonto = parseFloat(f.gastoMonto)||0;
+    const base = Math.max(0, honorarios - gastoMonto);
     const ivaPct = parseFloat(f.ivaPct)||0;
     const retPct = parseFloat(f.retPct)||0;
     const ivaAmount = Math.round(base*ivaPct/100);
     const retAmount = Math.round(base*retPct/100);
     const total = base + ivaAmount - retAmount;
-    preview = { count: regs.length, base, ivaAmount, retAmount, total };
+    preview = { count: regs.length, honorarios, gastoMonto, base, ivaAmount, retAmount, total };
   }
   const facCid = S.facturasCenterId;
   const invoices = [...DATA.invoices].reverse().filter(inv=> facCid==='all' || inv.centerId===facCid);
@@ -871,14 +891,22 @@ function adminFacturacion(){
       <div class="f"><label>Número de factura</label><input placeholder="Ej: 26/001" value="${f.numero}" onchange="App.setFacturaField('numero',this.value)"/></div>
       <div class="f"><label>Fecha de operación — desde</label><input type="date" value="${f.dateFrom}" onchange="App.setFacturaField('dateFrom',this.value)"/></div>
       <div class="f"><label>Fecha de operación — hasta</label><input type="date" value="${f.dateTo}" onchange="App.setFacturaField('dateTo',this.value)"/></div>
-      <div class="f"><label>% IVA</label><input class="rate-input" style="width:100%" value="${f.ivaPct}" onchange="App.setFacturaField('ivaPct',this.value)"/></div>
-      <div class="f"><label>% Retención IRPF (opcional)</label><input class="rate-input" style="width:100%" value="${f.retPct}" onchange="App.setFacturaField('retPct',this.value)"/></div>
+      <div class="f"><label>% IVA</label><input class="rate-input" type="number" min="0" step="any" placeholder="Ej: 21" style="width:100%" value="${f.ivaPct}" onchange="App.setFacturaField('ivaPct',this.value)"/></div>
+      <div class="f"><label>% Retención IRPF (opcional)</label><input class="rate-input" type="number" min="0" step="any" placeholder="Ej: 15" style="width:100%" value="${f.retPct}" onchange="App.setFacturaField('retPct',this.value)"/></div>
     </div>
     <div class="f" style="margin-top:10px">
       <label>Descripción del servicio</label>
       <input style="width:100%" placeholder="Ej: Honorarios profesionales — periodo ${f.dateFrom && f.dateTo ? fmtDate(f.dateFrom)+' a '+fmtDate(f.dateTo) : '01/05/2026 a 31/05/2026'}" value="${f.descripcion}" onchange="App.setFacturaField('descripcion',this.value)"/>
       <p class="hint" style="padding-top:4px">Si lo dejas vacío, se usa automáticamente "Honorarios profesionales — periodo [fechas]".</p>
     </div>
+
+    <div class="section-label" style="margin-top:16px">Gastos (opcional)</div>
+    <p class="hint" style="padding:0 0 10px">Si cargás un gasto, se resta de los honorarios antes de calcular la base imponible, el IVA y la retención.</p>
+    <div class="form-grid">
+      <div class="f"><label>Descripción del gasto</label><input placeholder="Ej: Material clínico" value="${f.gastoDesc}" onchange="App.setFacturaField('gastoDesc',this.value)"/></div>
+      <div class="f"><label>Monto del gasto</label><input class="rate-input" type="number" min="0" step="1" placeholder="Ej: 120" style="width:100%" value="${f.gastoMonto}" onchange="App.setFacturaField('gastoMonto',this.value)"/></div>
+    </div>
+
     <div class="f" style="margin-top:10px">
       <label>Notas / mención legal de exención</label>
       <textarea rows="3" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;resize:vertical" placeholder="Ej: Exento I.G.I.C. artículo 50 Ley 4/2012" onchange="App.setFacturaField('notas',this.value)">${f.notas}</textarea>
@@ -887,7 +915,9 @@ function adminFacturacion(){
     ${preview ? `
     <div class="panel" style="margin:16px 0 0;background:var(--surface-alt);border:none;box-shadow:none">
       <div class="panel-title">Vista previa — ${preview.count} registro${preview.count===1?'':'s'} en el periodo</div>
-      <div class="bar-row"><div class="name">Base imponible (total ganado)</div><div class="bar-track" style="visibility:hidden"></div><div class="amt">${money(preview.base)}</div></div>
+      <div class="bar-row"><div class="name">Honorarios (total ganado)</div><div class="bar-track" style="visibility:hidden"></div><div class="amt">${money(preview.honorarios)}</div></div>
+      ${preview.gastoMonto!==0 ? `<div class="bar-row"><div class="name">Gasto${f.gastoDesc?': '+f.gastoDesc:''}</div><div class="bar-track" style="visibility:hidden"></div><div class="amt">${money(-preview.gastoMonto)}</div></div>` : ''}
+      <div class="bar-row"><div class="name">Base imponible</div><div class="bar-track" style="visibility:hidden"></div><div class="amt">${money(preview.base)}</div></div>
       ${preview.ivaAmount!==0 ? `<div class="bar-row"><div class="name">IVA (${f.ivaPct}%)</div><div class="bar-track" style="visibility:hidden"></div><div class="amt">${money(preview.ivaAmount)}</div></div>` : ''}
       ${preview.retAmount!==0 ? `<div class="bar-row"><div class="name">Retención IRPF (${f.retPct}%)</div><div class="bar-track" style="visibility:hidden"></div><div class="amt">${money(-preview.retAmount)}</div></div>` : ''}
       <div class="bar-row"><div class="name" style="font-weight:700">Total</div><div class="bar-track" style="visibility:hidden"></div><div class="amt" style="font-weight:700;color:var(--accent)">${money(preview.total)}</div></div>
@@ -908,7 +938,7 @@ function adminFacturacion(){
       <div class="center-card-head">
         <div>
           <div class="c-name">${inv.numero}</div>
-          <div class="c-sub">${centerName(inv.centerId)} · ${fmtDate(inv.dateFrom)} – ${fmtDate(inv.dateTo)}</div>
+          <div class="c-sub">${centerDot(inv.centerId)}${centerName(inv.centerId)} · ${fmtDate(inv.dateFrom)} – ${fmtDate(inv.dateTo)}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">
           <div style="font-family:var(--mono);font-weight:700;font-size:15px">${money(inv.total)}</div>
@@ -975,13 +1005,21 @@ function buildInvoicePDF(inv){
   const descText = inv.descripcion || `Honorarios profesionales — periodo ${fmtDate(inv.dateFrom)} a ${fmtDate(inv.dateTo)}`;
   const descLines = doc.splitTextToSize(descText.toUpperCase(), (pageRight-mx)-35);
   doc.text(descLines, mx, y);
-  doc.text(money(inv.base), pageRight, y, {align:'right'});
+  doc.text(money(inv.honorarios ?? inv.base), pageRight, y, {align:'right'});
   y += Math.max(descLines.length*5, 12);
 
   doc.setLineWidth(0.3); doc.line(mx, y, pageRight, y);
   y += 9;
 
   doc.setFont('helvetica','normal'); doc.setFontSize(10);
+  if(inv.gastoMonto){
+    doc.text('HONORARIOS', mx, y);
+    doc.text(money(inv.honorarios), pageRight, y, {align:'right'});
+    y += 7;
+    doc.text(`GASTO${inv.gastoDesc ? ': '+inv.gastoDesc.toUpperCase() : ''}`, mx, y);
+    doc.text(money(-inv.gastoMonto), pageRight, y, {align:'right'});
+    y += 7;
+  }
   doc.text('BASE IMPONIBLE', mx, y);
   doc.text(money(inv.base), pageRight, y, {align:'right'});
   y += 7;
@@ -1054,6 +1092,17 @@ function adminPerfil(){
       <div class="f"><label>IVA intracomunitario (VIES)</label><input placeholder="Ej: ESX1234567X" value="${d.ivaIntra}" onchange="App.setProfileField('ivaIntra',this.value)"/></div>
     </div>
     <p class="hint" style="padding:10px 0 0">El IVA intracomunitario solo es necesario si facturas a centros de otros países de la UE.</p>
+
+    <div class="section-label" style="margin-top:16px">Moneda</div>
+    <div class="form-grid">
+      <div class="f">
+        <select onchange="App.setProfileField('currency',this.value)">
+          <option value="EUR" ${d.currency==='EUR'?'selected':''}>Euro (€)</option>
+          <option value="USD" ${d.currency==='USD'?'selected':''}>Dólar (US$)</option>
+        </select>
+      </div>
+    </div>
+    <p class="hint" style="padding:6px 0 0">Cambia el símbolo y formato en toda la app. No convierte los montos ya cargados — es solo el formato de visualización.</p>
     <div style="display:flex;align-items:center;gap:12px;padding-top:16px">
       <button class="btn-add" onclick="App.saveProfile()" ${S.profileDirty?'':'disabled'} style="${S.profileDirty?'':'opacity:.45;cursor:default'}">Guardar cambios</button>
       <span style="font-size:12.5px;color:${S.profileDirty?'var(--amber)':'var(--ink-faint)'}">
@@ -1156,7 +1205,8 @@ const App = {
     const name = document.getElementById('new-center-name').value.trim();
     if(!name) return;
     const id = 'c'+(DATA.centers.length+1);
-    DATA.centers.push({id, name, active:true,
+    const color = CENTER_COLORS[DATA.centers.length % CENTER_COLORS.length];
+    DATA.centers.push({id, name, active:true, color,
       billing:{rep:'', street:'', city:'', cp:'', taxIdType:'CIF', taxId:'', ivaIntra:''},
       variables:[]});
     DATA.procedures.forEach(p=>{ DATA.rates[id+'_'+p.id+'_unico']=0; });
@@ -1167,9 +1217,11 @@ const App = {
     const c = DATA.centers.find(x=>x.id===id);
     S.editCenterId = id;
     S.editCenterVars = c.variables.map(v=>({id:v.id, name:v.name, pct:v.pct}));
+    S.editCenterColor = c.color || CENTER_COLORS[0];
     render();
   },
-  cancelEditCenter(){ S.editCenterId = null; S.editCenterVars = null; render(); },
+  setEditCenterColor(hex){ S.editCenterColor = hex; render(); },
+  cancelEditCenter(){ S.editCenterId = null; S.editCenterVars = null; S.editCenterColor = null; render(); },
   addCenterVariable(){
     S.editCenterVars.push({id:'tmp'+Date.now()+Math.floor(Math.random()*1000), name:'', pct:0});
     render();
@@ -1184,6 +1236,7 @@ const App = {
     const name = document.getElementById('edit-center-name-'+id).value.trim();
     if(!name) return;
     c.name = name;
+    c.color = S.editCenterColor || c.color || CENTER_COLORS[0];
     c.billing = {
       rep: document.getElementById('edit-center-rep-'+id).value.trim(),
       street: document.getElementById('edit-center-street-'+id).value.trim(),
@@ -1205,7 +1258,7 @@ const App = {
       .filter(v=>v.name && v.name.trim())
       .map(v=>({ id: v.id.startsWith('tmp') ? 'v'+(vcounter++) : v.id, name: v.name.trim(), pct: v.pct||0 }));
     DATA.audit.push({ts:nowTs(), action:'editado', desc:`Centro actualizado: ${name} (${profitLabel(c)})`});
-    S.editCenterId = null; S.editCenterVars = null; S.tarifaDraft = null; render();
+    S.editCenterId = null; S.editCenterVars = null; S.editCenterColor = null; S.tarifaDraft = null; render();
   },
 
   toggleAddProc(){ S.addProcOpen = !S.addProcOpen; render(); },
@@ -1353,7 +1406,10 @@ const App = {
     if(!f.dateFrom || !f.dateTo){ alert('Selecciona el periodo (fecha de operación).'); return; }
     if(f.dateFrom > f.dateTo){ alert('La fecha "desde" no puede ser posterior a "hasta".'); return; }
     const regs = DATA.registrations.filter(r=>!r.deleted && r.centerId===f.centerId && r.date>=f.dateFrom && r.date<=f.dateTo);
-    const base = regs.reduce((s,r)=>s+(r.earned||0),0);
+    const honorarios = regs.reduce((s,r)=>s+(r.earned||0),0);
+    const gastoDesc = (f.gastoDesc||'').trim();
+    const gastoMonto = parseFloat(f.gastoMonto)||0;
+    const base = Math.max(0, honorarios - gastoMonto);
     const ivaPct = parseFloat(f.ivaPct)||0;
     const retPct = parseFloat(f.retPct)||0;
     const ivaAmount = Math.round(base*ivaPct/100);
@@ -1369,6 +1425,7 @@ const App = {
       dateFrom: f.dateFrom,
       dateTo: f.dateTo,
       issueDate: new Date().toISOString().slice(0,10),
+      honorarios, gastoDesc, gastoMonto,
       ivaPct, retPct, base, ivaAmount, retAmount, total,
       descripcion,
       notas: f.notas || '',

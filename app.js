@@ -101,10 +101,12 @@ const S = {
   tarifaCenterId:'c1',
   resumenGroup:'dia',
   resumenDefaultApplied:false,
-  resumenDraft:{ centerId:'all', year:'all', month:'all', dateFrom:'', dateTo:'' },
+  resumenDraft:{ centerId:'all', dateMode:'yearMonth', year:'all', month:'all', dateFrom:'', dateTo:'' },
   resumenFiltersOpen:false,
-  resumenApplied:{ centerId:'all', year:'all', month:'all', dateFrom:'', dateTo:'' },
+  resumenApplied:{ centerId:'all', dateMode:'yearMonth', year:'all', month:'all', dateFrom:'', dateTo:'' },
   registrosCenterId:'all',
+  registrosDateMode:'yearMonth',
+  registrosYear:'all',
   registrosMonth:'all',
   registrosDateFrom:null,
   registrosDateTo:null,
@@ -497,7 +499,7 @@ function adminResumen(){
     const now = new Date();
     const y = String(now.getFullYear());
     const m = String(now.getMonth()+1).padStart(2,'0');
-    S.resumenDraft = { centerId:'all', year:y, month:m, dateFrom:'', dateTo:'' };
+    S.resumenDraft = { centerId:'all', dateMode:'yearMonth', year:y, month:m, dateFrom:'', dateTo:'' };
     S.resumenApplied = { ...S.resumenDraft };
     S.resumenDefaultApplied = true;
   }
@@ -546,32 +548,43 @@ function adminResumen(){
   </button>
   ${S.resumenFiltersOpen ? `
   <div class="filters-panel">
+    <div class="f" style="margin-bottom:14px">
+      <label>Centro</label>
+      <select onchange="App.setResumenDraftField('centerId',this.value)">
+        <option value="all" ${d.centerId==='all'?'selected':''}>Todos los centros</option>
+        ${DATA.centers.map(c=>`<option value="${c.id}" ${c.id===d.centerId?'selected':''}>${c.name}</option>`).join('')}
+      </select>
+    </div>
+
+    <div class="section-label">Filtrar por</div>
+    <div class="seg" style="margin-bottom:14px">
+      <button class="seg-btn ${d.dateMode==='year'?'active':''}" onclick="App.setResumenDateMode('year')">Año</button>
+      <button class="seg-btn ${d.dateMode==='yearMonth'?'active':''}" onclick="App.setResumenDateMode('yearMonth')">Año y mes</button>
+      <button class="seg-btn ${d.dateMode==='range'?'active':''}" onclick="App.setResumenDateMode('range')">Rango de fechas</button>
+    </div>
+
+    ${d.dateMode==='range' ? `
+    <div class="date-filter">
+      <div class="f"><label>Desde</label><input type="date" value="${d.dateFrom||''}" onchange="App.setResumenDraftField('dateFrom',this.value)"/></div>
+      <div class="f"><label>Hasta</label><input type="date" value="${d.dateTo||''}" onchange="App.setResumenDraftField('dateTo',this.value)"/></div>
+    </div>` : `
     <div class="form-grid">
-      <div class="f"><label>Centro</label>
-        <select onchange="App.setResumenDraftField('centerId',this.value)">
-          <option value="all" ${d.centerId==='all'?'selected':''}>Todos los centros</option>
-          ${DATA.centers.map(c=>`<option value="${c.id}" ${c.id===d.centerId?'selected':''}>${c.name}</option>`).join('')}
-        </select>
-      </div>
       <div class="f"><label>Año</label>
         <select onchange="App.setResumenDraftField('year',this.value)">
           <option value="all" ${d.year==='all'?'selected':''}>Todos los años</option>
           ${availableYears().map(y=>`<option value="${y}" ${y===d.year?'selected':''}>${y}</option>`).join('')}
         </select>
       </div>
+      ${d.dateMode==='yearMonth' ? `
       <div class="f"><label>Mes</label>
         <select onchange="App.setResumenDraftField('month',this.value)">
           <option value="all" ${d.month==='all'?'selected':''}>Todos los meses</option>
           ${MONTH_NAMES.map((name,i)=>{ const v=String(i+1).padStart(2,'0'); return `<option value="${v}" ${v===d.month?'selected':''}>${name}</option>`; }).join('')}
         </select>
-      </div>
-    </div>
-    <div class="date-filter">
-      <div class="f"><label>Desde</label><input type="date" value="${d.dateFrom||''}" onchange="App.setResumenDraftField('dateFrom',this.value)"/></div>
-      <div class="f"><label>Hasta</label><input type="date" value="${d.dateTo||''}" onchange="App.setResumenDraftField('dateTo',this.value)"/></div>
-    </div>
-    <p class="hint" style="padding:0 0 10px">Año/Mes y el rango de fechas son excluyentes — usar uno limpia el otro.</p>
-    <div style="display:flex;gap:10px">
+      </div>` : ''}
+    </div>`}
+
+    <div style="display:flex;gap:10px;margin-top:4px">
       <button class="btn-add" onclick="App.applyResumenFilter()">Filtrar</button>
       ${hasAnyFilter ? `<button class="icon-btn" onclick="App.clearResumenFilter()">Limpiar filtros</button>` : ''}
     </div>
@@ -638,24 +651,17 @@ function centerCard(c, editing){
     return `
     <div class="f"><label>Nombre del centro</label><input class="rate-input" style="width:100%;text-align:left" id="edit-center-name-${c.id}" value="${c.name}"/></div>
 
-    <div class="section-label" style="margin-top:16px">Color identificador</div>
-    <p class="hint" style="padding:0 0 8px">Se usa para reconocer este centro de un vistazo en Registros, Resumen y Facturación — no afecta ningún cálculo, es solo visual.</p>
-    <div class="color-swatches">
-      ${CENTER_COLORS.map(hex=>`
-        <button class="swatch ${selectedColor===hex?'selected':''}" style="background:${hex}" onclick="App.setEditCenterColor('${hex}')" title="${hex}"></button>`).join('')}
-    </div>
-
-    <div class="section-label" style="margin-top:16px">Datos de facturación</div>
+    <div class="section-label" style="margin-top:16px; margin-bottom:16px;">Datos de facturación</div>
     <div class="form-grid">
       <div class="f"><label>Razón social / Nombre</label><input id="edit-center-rep-${c.id}" value="${c.billing.rep}"/></div>
       <div class="f">
-        <label>Tipo de identificación fiscal</label>
+        <label>Tipo de identificación</label>
         <select id="edit-center-taxidtype-${c.id}">
           <option value="CIF" ${c.billing.taxIdType==='CIF'?'selected':''}>CIF</option>
           <option value="NIF" ${c.billing.taxIdType==='NIF'?'selected':''}>NIF</option>
         </select>
       </div>
-      <div class="f"><label>Número de identificación fiscal</label><input id="edit-center-taxid-${c.id}" value="${c.billing.taxId}"/></div>
+      <div class="f"><label>N° de identificación fiscal</label><input id="edit-center-taxid-${c.id}" value="${c.billing.taxId}"/></div>
       <div class="f"><label>IVA intracomunitario</label><input id="edit-center-ivaintra-${c.id}" placeholder="Ej: ESX1234567X" value="${c.billing.ivaIntra||''}"/></div>
       <div class="f"><label>Calle</label><input id="edit-center-street-${c.id}" value="${c.billing.street}"/></div>
       <div class="f"><label>Ciudad</label><input id="edit-center-city-${c.id}" value="${c.billing.city}"/></div>
@@ -673,6 +679,13 @@ function centerCard(c, editing){
         </div>`).join('') || '<div class="empty" style="padding:14px 0">Sin variables. Agrega al menos una.</div>'}
     </div>
     <button class="icon-btn" style="margin-top:8px" onclick="App.addCenterVariable()">${icon('plus-circle',13)} Agregar variable</button>
+
+	<div class="section-label" style="margin-top:16px">Color identificador</div>
+		<p class="hint" style="padding:0 0 8px">Se usa para reconocer este centro de un vistazo en Registros, Resumen y Facturación — no afecta ningún cálculo, es solo visual.</p>
+		<div class="color-swatches">
+		  ${CENTER_COLORS.map(hex=>`
+			<button class="swatch ${selectedColor===hex?'selected':''}" style="background:${hex}" onclick="App.setEditCenterColor('${hex}')" title="${hex}"></button>`).join('')}
+	</div>
 
     <div class="modal-actions" style="margin-top:18px">
       <button onclick="App.cancelEditCenter()">Cancelar</button>
@@ -814,23 +827,14 @@ function adminTarifas(){
   `;
 }
 
-function availableMonths(){
-  const set = new Set();
-  DATA.registrations.forEach(r=> set.add(r.date.slice(0,7)));
-  return [...set].sort().reverse();
-}
-function monthLabel(ym){
-  const d = new Date(ym+'-01T00:00:00');
-  const s = d.toLocaleDateString('es-ES', {month:'long', year:'numeric'});
-  return s.charAt(0).toUpperCase()+s.slice(1);
-}
-
 function adminRegistros(){
   const cid = S.registrosCenterId;
+  const year = S.registrosYear;
   const month = S.registrosMonth;
   const search = (S.registrosSearch||'').trim().toLowerCase();
   let regs = [...DATA.registrations].reverse().filter(r=> cid==='all' || r.centerId===cid);
-  if(month && month!=='all') regs = regs.filter(r=> r.date.slice(0,7)===month);
+  if(year && year!=='all') regs = regs.filter(r=> r.date.slice(0,4)===year);
+  if(month && month!=='all') regs = regs.filter(r=> r.date.slice(5,7)===month);
   if(S.registrosDateFrom) regs = regs.filter(r=> r.date >= S.registrosDateFrom);
   if(S.registrosDateTo) regs = regs.filter(r=> r.date <= S.registrosDateTo);
   if(search) regs = regs.filter(r=>
@@ -843,7 +847,7 @@ function adminRegistros(){
   const page = Math.min(S.registrosPage, totalPages);
   const pageRegs = regs.slice((page-1)*pageSize, page*pageSize);
 
-  const hasAnyFilter = cid!=='all' || month!=='all' || S.registrosDateFrom || S.registrosDateTo || search;
+  const hasAnyFilter = cid!=='all' || year!=='all' || month!=='all' || S.registrosDateFrom || S.registrosDateTo || search;
 
   return `
   <div class="admin-head"><div><h1>Registros</h1><p>Todas las atenciones ingresadas, con edición y borrado auditado.</p></div></div>
@@ -854,26 +858,43 @@ function adminRegistros(){
   </button>
   ${S.registrosFiltersOpen ? `
   <div class="filters-panel">
-    <div class="rate-select">
+    <div class="f" style="margin-bottom:14px">
+      <label>Centro</label>
       <select onchange="App.setRegistrosCenter(this.value)">
         <option value="all" ${cid==='all'?'selected':''}>Todos los centros</option>
         ${DATA.centers.map(c=>`<option value="${c.id}" ${c.id===cid?'selected':''}>${c.name}</option>`).join('')}
       </select>
     </div>
 
+    <div class="section-label">Filtrar por</div>
+    <div class="seg" style="margin-bottom:14px">
+      <button class="seg-btn ${S.registrosDateMode==='year'?'active':''}" onclick="App.setRegistrosDateMode('year')">Año</button>
+      <button class="seg-btn ${S.registrosDateMode==='yearMonth'?'active':''}" onclick="App.setRegistrosDateMode('yearMonth')">Año y mes</button>
+      <button class="seg-btn ${S.registrosDateMode==='range'?'active':''}" onclick="App.setRegistrosDateMode('range')">Rango de fechas</button>
+    </div>
+
+    ${S.registrosDateMode==='range' ? `
+    <div class="date-filter">
+      <div class="f"><label>Desde</label><input type="date" value="${S.registrosDateFrom||''}" onchange="App.setRegistrosDateFrom(this.value)"/></div>
+      <div class="f"><label>Hasta</label><input type="date" value="${S.registrosDateTo||''}" onchange="App.setRegistrosDateTo(this.value)"/></div>
+    </div>` : `
     <div class="form-grid">
+      <div class="f"><label>Año</label>
+        <select onchange="App.setRegistrosYear(this.value)">
+          <option value="all" ${year==='all'?'selected':''}>Todos los años</option>
+          ${availableYears().map(y=>`<option value="${y}" ${y===year?'selected':''}>${y}</option>`).join('')}
+        </select>
+      </div>
+      ${S.registrosDateMode==='yearMonth' ? `
       <div class="f"><label>Mes</label>
         <select onchange="App.setRegistrosMonth(this.value)">
           <option value="all" ${month==='all'?'selected':''}>Todos los meses</option>
-          ${availableMonths().map(m=>`<option value="${m}" ${m===month?'selected':''}>${monthLabel(m)}</option>`).join('')}
+          ${MONTH_NAMES.map((name,i)=>{ const v=String(i+1).padStart(2,'0'); return `<option value="${v}" ${v===month?'selected':''}>${name}</option>`; }).join('')}
         </select>
-      </div>
-      <div class="f"><label>Desde</label><input type="date" value="${S.registrosDateFrom||''}" onchange="App.setRegistrosDateFrom(this.value)"/></div>
-      <div class="f"><label>Hasta</label><input type="date" value="${S.registrosDateTo||''}" onchange="App.setRegistrosDateTo(this.value)"/></div>
-    </div>
-    <p class="hint" style="padding:0 0 10px">Mes y el rango de fechas son excluyentes — usar uno limpia el otro.</p>
+      </div>` : ''}
+    </div>`}
 
-    <div class="f">
+    <div class="f" style="margin-top:14px">
       <label>Buscar paciente (nombre o código)</label>
       <input placeholder="Ej: Marta Gómez o P-0231" value="${S.registrosSearch||''}" onchange="App.setRegistrosSearch(this.value)"/>
     </div>
@@ -902,7 +923,7 @@ function adminRegistros(){
     </table></div>
     <div class="pagination">
       <div class="pg-size">
-        <label>Por página</label>
+        <label>Registros</label>
         <select onchange="App.setRegistrosPageSize(this.value)">
           ${[10,20,50].map(n=>`<option value="${n}" ${n===pageSize?'selected':''}>${n}</option>`).join('')}
         </select>
@@ -948,17 +969,17 @@ function adminFacturacion(){
       <div class="f"><label>Periodo — desde</label><input type="date" value="${f.dateFrom}" onchange="App.setFacturaField('dateFrom',this.value)"/></div>
       <div class="f"><label>Periodo — hasta</label><input type="date" value="${f.dateTo}" onchange="App.setFacturaField('dateTo',this.value)"/></div>
       <div class="f"><label>% IVA</label><input class="rate-input" type="number" min="0" step="any" placeholder="Ej: 21" style="width:100%" value="${f.ivaPct}" onchange="App.setFacturaField('ivaPct',this.value)"/></div>
-      <div class="f"><label>% Retención IRPF (opcional)</label><input class="rate-input" type="number" min="0" step="any" placeholder="Ej: 15" style="width:100%" value="${f.retPct}" onchange="App.setFacturaField('retPct',this.value)"/></div>
+      <div class="f"><label>% Retención IRPF*</label><input class="rate-input" type="number" min="0" step="any" placeholder="Ej: 15" style="width:100%" value="${f.retPct}" onchange="App.setFacturaField('retPct',this.value)"/></div>
     </div>
     <div class="f" style="margin-top:10px">
       <label>Descripción del servicio</label>
+	  <p class="hint" style="padding:0;">* Si lo dejas vacío, se usa automáticamente "Honorarios profesionales — periodo [fechas]".</p>
       <input style="width:100%" placeholder="Ej: Honorarios profesionales — periodo ${f.dateFrom && f.dateTo ? fmtDate(f.dateFrom)+' a '+fmtDate(f.dateTo) : '01/05/2026 a 31/05/2026'}" value="${f.descripcion}" onchange="App.setFacturaField('descripcion',this.value)"/>
-      <p class="hint" style="padding-top:4px">Si lo dejas vacío, se usa automáticamente "Honorarios profesionales — periodo [fechas]".</p>
     </div>
 
     <div class="section-label" style="margin-top:16px">Gastos (opcional)</div>
-    <p class="hint" style="padding:0 0 10px">Si cargás un gasto, se resta de los honorarios antes de calcular la base imponible, el IVA y la retención.</p>
-    <div class="form-grid">
+    <p class="hint" style="padding:0 0 10px">* Si cargás un gasto, se resta de los honorarios antes de calcular la base imponible, el IVA y la retención.</p>
+    <div class="form-grid" style="margin: 10px 0;">
       <div class="f"><label>Descripción del gasto</label><input placeholder="Ej: Material clínico" value="${f.gastoDesc}" onchange="App.setFacturaField('gastoDesc',this.value)"/></div>
       <div class="f"><label>Monto del gasto</label><input class="rate-input" type="number" min="0" step="1" placeholder="Ej: 120" style="width:100%" value="${f.gastoMonto}" onchange="App.setFacturaField('gastoMonto',this.value)"/></div>
     </div>
@@ -977,9 +998,9 @@ function adminFacturacion(){
       ${preview.ivaAmount!==0 ? `<div class="bar-row"><div class="name">IVA (${f.ivaPct}%)</div><div class="bar-track" style="visibility:hidden"></div><div class="amt">${money(preview.ivaAmount)}</div></div>` : ''}
       ${preview.retAmount!==0 ? `<div class="bar-row"><div class="name">Retención IRPF (${f.retPct}%)</div><div class="bar-track" style="visibility:hidden"></div><div class="amt">${money(-preview.retAmount)}</div></div>` : ''}
       <div class="bar-row"><div class="name" style="font-weight:700">Total</div><div class="bar-track" style="visibility:hidden"></div><div class="amt" style="font-weight:700;color:var(--accent)">${money(preview.total)}</div></div>
-    </div>` : `<p class="hint" style="padding-top:10px">Selecciona centro y el periodo (fecha de operación) para ver el cálculo.</p>`}
+    </div>` : `<p class="hint" style="padding:10px 0 0 0;">Selecciona centro y el periodo (fecha de operación) para ver el cálculo.</p>`}
 
-    <button class="btn-add" style="margin-top:16px" onclick="App.generateFactura()">Generar factura (PDF)</button>
+    <button class="btn-add" style="margin-top:20px" onclick="App.generateFactura()">Generar factura (PDF)</button>
   </div>
 
   <div class="admin-head" style="margin-bottom:14px"><div><h1 style="font-size:16px">Facturas emitidas</h1></div></div>
@@ -1366,18 +1387,20 @@ const App = {
   setTarifaCenter(id){ S.tarifaCenterId = id; S.tarifaDraft = null; S.tarifaOpenProc = null; render(); },
   toggleTarifaProc(pid){ S.tarifaOpenProc = (S.tarifaOpenProc===pid ? null : pid); render(); },
   setResumenGroup(mode){ S.resumenGroup = mode; render(); },
-  setResumenDraftField(field,val){
-    S.resumenDraft[field] = val;
-    if((field==='year' || field==='month') && val && val!=='all'){
-      S.resumenDraft.dateFrom = ''; S.resumenDraft.dateTo = '';
-    } else if((field==='dateFrom' || field==='dateTo') && val){
+  setResumenDraftField(field,val){ S.resumenDraft[field] = val; render(); },
+  setResumenDateMode(mode){
+    S.resumenDraft.dateMode = mode;
+    if(mode==='range'){
       S.resumenDraft.year = 'all'; S.resumenDraft.month = 'all';
+    } else {
+      S.resumenDraft.dateFrom = ''; S.resumenDraft.dateTo = '';
+      if(mode==='year') S.resumenDraft.month = 'all';
     }
     render();
   },
   applyResumenFilter(){ S.resumenApplied = {...S.resumenDraft}; render(); },
   clearResumenFilter(){
-    S.resumenDraft = { centerId:'all', year:'all', month:'all', dateFrom:'', dateTo:'' };
+    S.resumenDraft = { centerId:'all', dateMode:'yearMonth', year:'all', month:'all', dateFrom:'', dateTo:'' };
     S.resumenApplied = {...S.resumenDraft};
     render();
   },
@@ -1388,26 +1411,27 @@ const App = {
     render();
   },
   setRegistrosCenter(id){ S.registrosCenterId = id; S.registrosPage = 1; render(); },
-  setRegistrosMonth(m){
-    S.registrosMonth = m;
-    if(m && m!=='all'){ S.registrosDateFrom = null; S.registrosDateTo = null; }
+  setRegistrosDateMode(mode){
+    S.registrosDateMode = mode;
+    if(mode==='range'){
+      S.registrosYear = 'all'; S.registrosMonth = 'all';
+    } else {
+      S.registrosDateFrom = null; S.registrosDateTo = null;
+      if(mode==='year') S.registrosMonth = 'all';
+    }
     S.registrosPage = 1; render();
   },
-  setRegistrosDateFrom(v){
-    S.registrosDateFrom = v || null;
-    if(v){ S.registrosMonth = 'all'; }
-    S.registrosPage = 1; render();
-  },
-  setRegistrosDateTo(v){
-    S.registrosDateTo = v || null;
-    if(v){ S.registrosMonth = 'all'; }
-    S.registrosPage = 1; render();
-  },
+  setRegistrosYear(y){ S.registrosYear = y; S.registrosPage = 1; render(); },
+  setRegistrosMonth(m){ S.registrosMonth = m; S.registrosPage = 1; render(); },
+  setRegistrosDateFrom(v){ S.registrosDateFrom = v || null; S.registrosPage = 1; render(); },
+  setRegistrosDateTo(v){ S.registrosDateTo = v || null; S.registrosPage = 1; render(); },
   setRegistrosSearch(v){ S.registrosSearch = v; S.registrosPage = 1; render(); },
   setRegistrosPage(p){ S.registrosPage = Math.max(1, p); render(); },
   setRegistrosPageSize(n){ S.registrosPageSize = parseInt(n,10)||20; S.registrosPage = 1; render(); },
   clearRegistrosFilters(){
     S.registrosCenterId = 'all';
+    S.registrosDateMode = 'yearMonth';
+    S.registrosYear = 'all';
     S.registrosMonth = 'all';
     S.registrosDateFrom = null;
     S.registrosDateTo = null;

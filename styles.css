@@ -322,7 +322,7 @@
   .dual-amt .dv-val{font-family:var(--mono);font-size:13.5px;font-weight:600;color:var(--ink);white-space:nowrap;}
   .dual-amt .dv.accent .dv-val{color:var(--accent);}
   @media (max-width:480px){
-    .bar-row.dual{flex-direction:column;align-items:stretch;}
+    .bar-row.dual{align-items:stretch;}
     .bar-row.dual .name{flex-basis:auto;}
     .bar-row.dual .bar-track{display:none;}
     .dual-amt{margin-left:0;justify-content:flex-start;}

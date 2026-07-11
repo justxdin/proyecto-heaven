@@ -538,8 +538,10 @@
     /* Evita el zoom automático de iOS al enfocar campos con letra menor a 16px */
     input:not([type="date"]), select, textarea{font-size:16px !important; zoom: 0.875; }
     /* Los inputs de fecha quedan afuera del zoom: en iOS esa propiedad
-       desalinea el área táctil del selector nativo y hace falta tocar dos veces */
-    input[type="date"]{font-size:16px !important; -webkit-appearance:none; appearance:none;}
+       desalinea el área táctil del selector nativo y hace falta tocar dos veces.
+       Tampoco llevan appearance:none: en type="date" (a diferencia de los select)
+       rompe la interacción nativa en iOS y selecciona una fecha sola al primer toque. */
+    input[type="date"]{font-size:16px !important; min-height:44px; padding-top:10px; padding-bottom:10px;}
     .rate-input{width:100%;}
     .mobile-topbar{
       display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;

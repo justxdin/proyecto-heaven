@@ -575,8 +575,8 @@ function adminResumen(){
 
     ${d.dateMode==='range' ? `
     <div class="date-filter">
-      <div class="f"><label>Desde</label><input type="date" value="${d.dateFrom||''}" onchange="App.setResumenDraftField('dateFrom',this.value)"/></div>
-      <div class="f"><label>Hasta</label><input type="date" value="${d.dateTo||''}" onchange="App.setResumenDraftField('dateTo',this.value)"/></div>
+      <div class="f"><label>Desde</label><input type="date" value="${d.dateFrom||''}" max="${d.dateTo||''}" onchange="App.setResumenDraftField('dateFrom',this.value)"/></div>
+      <div class="f"><label>Hasta</label><input type="date" value="${d.dateTo||''}" min="${d.dateFrom||''}" ${!d.dateFrom?'disabled':''} onchange="App.setResumenDraftField('dateTo',this.value)"/></div>
     </div>` : `
     <div class="form-grid">
       <div class="f"><label>Año</label>
@@ -885,8 +885,8 @@ function adminRegistros(){
 
     ${S.registrosDateMode==='range' ? `
     <div class="date-filter">
-      <div class="f"><label>Desde</label><input type="date" value="${S.registrosDateFrom||''}" onchange="App.setRegistrosDateFrom(this.value)"/></div>
-      <div class="f"><label>Hasta</label><input type="date" value="${S.registrosDateTo||''}" onchange="App.setRegistrosDateTo(this.value)"/></div>
+      <div class="f"><label>Desde</label><input type="date" value="${S.registrosDateFrom||''}" max="${S.registrosDateTo||''}" onchange="App.setRegistrosDateFrom(this.value)"/></div>
+      <div class="f"><label>Hasta</label><input type="date" value="${S.registrosDateTo||''}" min="${S.registrosDateFrom||''}" ${!S.registrosDateFrom?'disabled':''} onchange="App.setRegistrosDateTo(this.value)"/></div>
     </div>` : `
     <div class="form-grid">
       <div class="f"><label>Año</label>
@@ -976,8 +976,8 @@ function adminFacturacion(){
         </select>
       </div>
       <div class="f"><label>Número de factura</label><input placeholder="Ej: 26/001" value="${f.numero}" onchange="App.setFacturaField('numero',this.value)"/></div>
-      <div class="f"><label>Periodo — desde</label><input type="date" value="${f.dateFrom}" onchange="App.setFacturaField('dateFrom',this.value)"/></div>
-      <div class="f"><label>Periodo — hasta</label><input type="date" value="${f.dateTo}" onchange="App.setFacturaField('dateTo',this.value)"/></div>
+      <div class="f"><label>Periodo — desde</label><input type="date" value="${f.dateFrom}" max="${f.dateTo||''}" onchange="App.setFacturaField('dateFrom',this.value)"/></div>
+      <div class="f"><label>Periodo — hasta</label><input type="date" value="${f.dateTo}" min="${f.dateFrom||''}" ${!f.dateFrom?'disabled':''} onchange="App.setFacturaField('dateTo',this.value)"/></div>
       <div class="f"><label>% IVA</label><input class="rate-input" type="number" min="0" step="any" placeholder="Ej: 21" style="width:100%" value="${f.ivaPct}" onchange="App.setFacturaField('ivaPct',this.value)"/></div>
       <div class="f"><label>% Retención IRPF*</label><input class="rate-input" type="number" min="0" step="any" placeholder="Ej: 15" style="width:100%" value="${f.retPct}" onchange="App.setFacturaField('retPct',this.value)"/></div>
     </div>
@@ -1401,7 +1401,13 @@ const App = {
   setTarifaCenter(id){ S.tarifaCenterId = id; S.tarifaDraft = null; S.tarifaOpenProc = null; render(); },
   toggleTarifaProc(pid){ S.tarifaOpenProc = (S.tarifaOpenProc===pid ? null : pid); render(); },
   setResumenGroup(mode){ S.resumenGroup = mode; render(); },
-  setResumenDraftField(field,val){ S.resumenDraft[field] = val; render(); },
+  setResumenDraftField(field,val){
+    const d = S.resumenDraft;
+    d[field] = val;
+    if(field==='dateFrom' && d.dateTo && val && d.dateTo < val) d.dateTo = val;
+    if(field==='dateTo' && d.dateFrom && val && val < d.dateFrom) d.dateTo = d.dateFrom;
+    render();
+  },
   setResumenDateMode(mode){
     S.resumenDraft.dateMode = mode;
     if(mode==='range'){
@@ -1437,8 +1443,16 @@ const App = {
   },
   setRegistrosYear(y){ S.registrosYear = y; S.registrosPage = 1; render(); },
   setRegistrosMonth(m){ S.registrosMonth = m; S.registrosPage = 1; render(); },
-  setRegistrosDateFrom(v){ S.registrosDateFrom = v || null; S.registrosPage = 1; render(); },
-  setRegistrosDateTo(v){ S.registrosDateTo = v || null; S.registrosPage = 1; render(); },
+  setRegistrosDateFrom(v){
+    S.registrosDateFrom = v || null;
+    if(S.registrosDateTo && v && S.registrosDateTo < v) S.registrosDateTo = v;
+    S.registrosPage = 1; render();
+  },
+  setRegistrosDateTo(v){
+    S.registrosDateTo = v || null;
+    if(S.registrosDateFrom && v && v < S.registrosDateFrom) S.registrosDateTo = S.registrosDateFrom;
+    S.registrosPage = 1; render();
+  },
   setRegistrosSearch(v){ S.registrosSearch = v; S.registrosPage = 1; render(); },
   setRegistrosPage(p){ S.registrosPage = Math.max(1, p); render(); },
   setRegistrosPageSize(n){ S.registrosPageSize = parseInt(n,10)||20; S.registrosPage = 1; render(); },
@@ -1526,7 +1540,13 @@ const App = {
     DATA.audit.push({ts:nowTs(), action:'editado', desc:'Perfil actualizado'});
     S.profileDirty = false; S.profileSaved = true; render();
   },
-  setFacturaField(field,val){ S.facturaForm[field] = val; render(); },
+  setFacturaField(field,val){
+    S.facturaForm[field] = val;
+    const f = S.facturaForm;
+    if(field==='dateFrom' && f.dateTo && val && f.dateTo < val) f.dateTo = val;
+    if(field==='dateTo' && f.dateFrom && val && val < f.dateFrom) f.dateTo = f.dateFrom;
+    render();
+  },
   generateFactura(){
     const f = S.facturaForm;
     if(!f.numero || !f.numero.trim()){ alert('Ingresa un número de factura.'); return; }

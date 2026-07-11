@@ -16,8 +16,8 @@
     --danger-soft:#F5E1DE;
     --radius:14px;
     --sans:'Inter',sans-serif;
-    --display:'Space Grotesk',sans-serif;
-    --mono:'IBM Plex Mono',monospace;
+    --display:'Roboto',sans-serif;
+    --mono:'Quicksand',monospace;
     --shadow:0 1px 2px rgba(22,35,43,.04), 0 8px 24px -12px rgba(22,35,43,.18);
   }
   *{box-sizing:border-box;}
@@ -91,7 +91,7 @@
     box-shadow:var(--shadow);
     overflow:hidden;
     display:flex;flex-direction:column;
-    min-height:780px;
+    height:780px;
   }
   /* En tablet/escritorio no tiene sentido dejar una columna angosta perdida en medio de la pantalla */
   @media (min-width:700px){
@@ -100,21 +100,26 @@
     .proc-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
   }
   @media (min-width:1100px){
-    .phone{width:580px;min-height:820px;}
+    .phone{width:580px;height:820px;}
   }
   /* En un celular real no queremos simular un teléfono: ocupa toda la pantalla, sin marco */
   @media (max-width:600px){
     .stage{padding:0;min-height:100dvh;align-items:stretch;}
     .phone{
       width:100%;border-radius:0;border:none;box-shadow:none;
-      min-height:100dvh;
+      height:100dvh;
     }
   }
   .op-topbar{
     display:flex;align-items:center;justify-content:space-between;
     padding:16px 18px 12px;
     border-bottom:1px solid var(--border);
+    flex-shrink:0;
   }
+  /* Tema operativo (Registrar / Historial): acentos en naranja */
+  .op-theme{--accent:#FFA726;--accent-soft:#FFE0B2;}
+  /* Tema admin: acentos en turquesa */
+  .admin-theme{--accent:#17919C;--accent-soft:#C9EFEC;}
   .op-topbar .who{display:flex;align-items:center;gap:9px;}
   .op-topbar .who .mark{width:28px;height:28px;border-radius:8px;background:#000;
     display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;}
@@ -128,6 +133,7 @@
   .admin-link-btn:hover{background:var(--accent);}
 
   .op-body{flex:1;overflow-y:auto;padding:18px;}
+  .op-body.hist-wash{background:rgba(255,167,38,.08);}
   .op-body h1{font-family:var(--display);font-size:19px;margin:2px 0 4px;letter-spacing:-.01em;}
   .op-body .sub{font-size:13.5px;color:var(--ink-soft);margin:0 0 18px;}
 
@@ -153,21 +159,23 @@
   .summary-bar .lbl{font-size:11.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;font-weight:700;}
   .summary-bar .amt{font-family:var(--mono);font-weight:600;font-size:17px;}
 
-  .op-footer{padding:14px 18px 20px;border-top:1px solid var(--border);}
+  .op-footer{padding:14px 0 4px;border-top:1px solid var(--border);}
   .btn-save{
     width:100%;padding:15px;border:none;border-radius:12px;background:var(--accent);
     color:#fff;font-weight:700;font-size:15px;letter-spacing:.01em;
   }
+  .op-theme .btn-save{color:#4A2A00;}
   .btn-save:disabled{background:var(--surface-alt);color:var(--ink-faint);}
   .btn-save:not(:disabled):active{transform:scale(.98);}
 
-  .op-tabbar{display:flex;border-top:1px solid var(--border);}
+  .op-tabbar{display:flex;border-top:1px solid var(--border);flex-shrink:0;background:var(--surface);}
   .op-tab{
     flex:1;padding:12px 4px 14px;background:none;border:none;
     display:flex;flex-direction:column;align-items:center;gap:3px;
     color:var(--ink-faint);font-size:11px;font-weight:600;
   }
-  .op-tab.active{color:var(--accent);}
+  .op-tab svg{color:var(--accent);}
+  .op-tab.active{color:var(--ink);}
 
   /* history rows */
   .hist-row{
@@ -284,7 +292,7 @@
   }
   .nav-backdrop.open{opacity:1;}
 
-  .admin-main{margin-left:220px;min-width:0;padding:30px 38px;max-width:1280px;}
+  .admin-main{margin-left:220px;min-width:0;padding:30px 38px;max-width:1280px;background:#E3F6F4;}
   .admin-head{display:flex;flex-direction:column;align-items:flex-start;gap:10px;margin-bottom:22px;}
   @media (min-width:640px){ .admin-head{flex-direction:row;justify-content:space-between;align-items:flex-end;} }
   .admin-head h1{font-family:var(--display);font-size:21px;font-weight:700;margin:0 0 4px;letter-spacing:-.01em;line-height:1.2;}
@@ -469,6 +477,7 @@
   .modal-actions{display:flex;gap:10px;margin-top:18px;}
   .modal-actions button{flex:1;padding:11px;border-radius:9px;font-weight:600;font-size:13.5px;border:1px solid var(--border);background:var(--surface);}
   .modal-actions .primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .op-theme .modal-actions .primary{color:#4A2A00;}
 
   @media (max-width:760px){
     /* Evita el zoom automático de iOS al enfocar campos con letra menor a 16px */

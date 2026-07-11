@@ -239,7 +239,7 @@ function loginScreen(){
 function operatorScreen(){
   return `
   <div class="stage">
-    <div class="phone">
+    <div class="phone op-theme">
       ${opTopbar()}
       ${S.opScreen==='registro' ? opRegistro() : opHistorial()}
       <div class="op-tabbar">
@@ -320,16 +320,17 @@ function opRegistro(){
       <div class="lbl">Total a registrar</div>
       <div class="amt">${money(total)}</div>
     </div>
-  </div>
-  <div class="op-footer">
-    <button class="btn-save" ${canSave?'':'disabled'} onclick="App.saveRegistro()">Guardar registro</button>
+
+    <div class="op-footer">
+      <button class="btn-save" ${canSave?'':'disabled'} onclick="App.saveRegistro()">Guardar registro</button>
+    </div>
   </div>`;
 }
 
 function opHistorial(){
   const regs = [...DATA.registrations].filter(r=>!r.deleted).reverse();
   return `
-  <div class="op-body">
+  <div class="op-body hist-wash">
     <h1>Historial</h1>
     <p class="sub">Tus últimos registros, más reciente primero.</p>
     ${regs.length===0 ? `<div class="empty">Aún no hay registros.</div>` : regs.map(r=>`
@@ -351,7 +352,7 @@ function opHistorial(){
 function ticketOverlay(){
   const t = S.ticket;
   return `
-  <div class="ticket-overlay" onclick="if(event.target===this) App.closeTicket()">
+  <div class="ticket-overlay op-theme" onclick="if(event.target===this) App.closeTicket()">
     <div class="ticket">
       <div class="t-head">
         <div class="ok">✓</div>
@@ -376,7 +377,7 @@ function detailModal(){
   const r = DATA.registrations.find(x=>x.id===S.detailReg);
   if(!r) return '';
   return `
-  <div class="modal-overlay" onclick="if(event.target===this) App.closeDetail()">
+  <div class="modal-overlay op-theme" onclick="if(event.target===this) App.closeDetail()">
     <div class="modal">
       <h3>Detalle del registro</h3>
       <div class="t-row"><span class="k">Fecha</span><span class="v">${fmtDate(r.date)}</span></div>
@@ -401,7 +402,7 @@ function adminScreen(){
     tarifas: adminTarifas, facturacion: adminFacturacion, registros: adminRegistros, auditoria: adminAuditoria, perfil: adminPerfil,
   };
   return `
-  <div class="admin-wrap">
+  <div class="admin-wrap admin-theme">
     <div class="mobile-topbar">
       <div class="mt-left">
         <button class="hamburger-btn" style="color:var(--ink)" onclick="App.goOperator()" title="Volver a la app" aria-label="Volver a la app">${icon('arrow-left',18)}</button>
@@ -1157,7 +1158,10 @@ function adminPerfil(){
   }
   const d = S.profileDraft;
   return `
-  <div class="admin-head"><div><h1>Perfil</h1><p>Tus datos personales. Los campos marcados se usan para generar tus facturas — todos son opcionales.</p></div></div>
+  <div class="admin-head">
+    <div><h1>Perfil</h1><p>Tus datos personales. Los campos marcados se usan para generar tus facturas — todos son opcionales.</p></div>
+    <button class="icon-btn" onclick="App.closePerfil()">${icon('arrow-left',13)} Volver a Resumen</button>
+  </div>
   <div class="panel" style="padding:18px">
     <div class="form-grid">
       <div class="f"><label>Nombre</label><input value="${d.nombre}" onchange="App.setProfileField('nombre',this.value)"/></div>
@@ -1195,7 +1199,7 @@ function editModal(){
   const center = DATA.centers.find(c=>c.id===r.centerId);
   const variables = center ? center.variables : [];
   return `
-  <div class="modal-overlay" onclick="if(event.target===this) App.closeEdit()">
+  <div class="modal-overlay admin-theme" onclick="if(event.target===this) App.closeEdit()">
     <div class="modal">
       <h3>Editar registro <span style="font-weight:400;color:var(--ink-faint);font-size:12px;font-family:var(--mono)">#${r.id}</span></h3>
       <div class="f" style="margin-bottom:10px"><label>Nombre del paciente</label><input value="${r.patientName||''}" onchange="App.editSetPatientField('patientName',this.value)"/></div>
@@ -1499,6 +1503,14 @@ const App = {
     doc.save(exportFileName('pdf'));
   },
   setProfileField(field,val){ S.profileDraft[field] = val; S.profileDirty = true; S.profileSaved = false; render(); },
+  closePerfil(){
+    S.profileDraft = null;
+    S.profileDirty = false;
+    S.profileSaved = false;
+    S.adminScreen = 'resumen';
+    S.mobileNavOpen = false;
+    render();
+  },
   saveProfile(){
     DATA.profile = {...S.profileDraft};
     DATA.audit.push({ts:nowTs(), action:'editado', desc:'Perfil actualizado'});

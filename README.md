@@ -6,29 +6,34 @@ No es un software clínico: no guarda fichas médicas, solo el nombre y código 
 
 ## Ver el prototipo
 
+**🔗 Prototipo en vivo: [justxdin.github.io/proyecto-heaven](https://justxdin.github.io/proyecto-heaven/)**
+
 Este repo contiene un **prototipo visual interactivo**, separado en tres archivos sin dependencias de build ni backend:
 
 ```
-index.html   → estructura, carga las librerías de exportación (SheetJS, jsPDF)
+index.html   → estructura, carga Google Fonts (Sora / Inter / IBM Plex Mono) y las librerías de exportación (SheetJS, jsPDF)
 styles.css   → estilos
 app.js       → estado, datos de ejemplo y toda la lógica
 ```
 
-Se puede abrir `index.html` directamente en el navegador, o publicarlo con GitHub Pages:
+También se puede abrir `index.html` directamente en el navegador, o publicar tu propia copia con GitHub Pages:
 
 **Settings → Pages → Deploy from branch → `main` → `/ (root)`**
 
-Queda disponible en `https://justxdin.github.io/proyecto-heaven/`
-
-Los tres archivos deben estar en la misma carpeta. Los datos que se ven (centros, procedimientos, tarifas, ~23 registros de ejemplo repartidos entre junio y julio) son de prueba y viven en memoria del navegador: al recargar la página vuelven a su estado inicial.
+Los tres archivos deben estar en la misma carpeta. Los datos que se ven (centros, procedimientos, tarifas, ~23 registros de ejemplo repartidos entre junio y julio) son de prueba y viven en memoria del navegador: al recargar la página o cerrar sesión vuelven a su estado inicial.
 
 ## Diseño
 
+- **Identidad visual**: tipografía Sora para títulos (Inter para texto, IBM Plex Mono para números/datos), isotipo propio en SVG, y un único azul de acento (`#2563EB`) en toda la app.
+- **Vista operativa vs. panel admin, diferenciados por estructura, no por color**: la vista operativa es clara de punta a punta; el admin tiene su propio sidebar en navy oscuro (fijo en escritorio, off-canvas en mobile) — así se distinguen de un vistazo sin necesitar dos paletas de color distintas.
+- **Fondo con degradado de marca** (los mismos tonos suaves en login y admin): animado en el login (se ve pocos segundos), estático en el admin (pantalla de trabajo, para no generar distracción en sesiones largas); respeta `prefers-reduced-motion`.
+- **Profundidad real**: sombras en tarjetas, paneles y modales (no solo bordes), anillos de foco suaves en los campos.
 - **Mobile-first de verdad**: la base de los estilos es para celular real (sin simular un marco de teléfono en pantallas chicas), y se agranda progresivamente en tablet/escritorio — tanto la vista operativa como el panel admin.
+- **Pulido específico para iOS**: se desactivó el flash de "tap highlight" nativo, y los `<select>` (filtros, tarifas, paginación) tienen flecha e interacción propias en vez del estilo nativo del sistema, que se ve inconsistente en iPhone.
+- **Estados de hover** en todo elemento clickeable (chips, botones, filas de historial, tabs, selects) en dispositivos con mouse.
 - **Sistema de íconos SVG propio**, minimalista y coherente en toda la app (menú, acciones, filtros, exportar, etc.), sin depender de ninguna librería externa de íconos.
 - **Tablas responsivas**: en escritorio se ven como tabla; en mobile cada fila pasa a ser una tarjeta con etiquetas, con las acciones (Editar/Eliminar) arriba en vez de al final.
 - **Color identificador por centro**: se elige de una paleta curada de 8 colores y se aplica automáticamente (tinte suave) en filas de Registros, barras de Resumen y tarjetas de Facturas, para reconocer cada centro de un vistazo.
-- Menú lateral fijo en escritorio (`100vh`) y menú hamburguesa off-canvas en mobile.
 
 ## Qué incluye el prototipo
 
@@ -36,7 +41,7 @@ Los tres archivos deben estar en la misma carpeta. Los datos que se ven (centros
 - Login
 - Registro rápido: centro → nombre y código de paciente (opcionales) → variable/categoría del paciente (definida por cada centro) → uno o varios procedimientos → guardar, con ticket de confirmación que muestra total facturado y ganancia estimada
 - Historial de registros propios
-- Acceso directo al panel admin
+- Acceso directo al panel admin, y cierre de sesión
 
 **Panel administrativo (escritorio y mobile, con menú fijo/hamburguesa)**
 - **Resumen**: totales facturados y ganados. Filtros por Centro / Año / Mes / rango de fechas, ocultos detrás de un botón "Filtros" y aplicados recién al tocar "Filtrar" (no automático). Arranca mostrando el mes actual por defecto. Historial agrupable por día/mes/año, y exportación a Excel y PDF respetando el filtro activo.
@@ -47,6 +52,7 @@ Los tres archivos deben estar en la misma carpeta. Los datos que se ven (centros
 - **Registros**: listado con edición y borrado auditado. Filtros por Centro / Mes / rango de fechas / buscador de paciente (nombre o código), paginado (10/20/50 por página). La vista general muestra Centro, Fecha, Nombre, Código, Total, Ganancia y Acciones; el ID, la categoría y el detalle de procedimientos quedan disponibles al editar.
 - **Auditoría**: historial cronológico de cambios (creado / editado / eliminado).
 - **Perfil** (ícono de ajustes): datos personales del profesional (nombre, apellido, calle, ciudad, código postal, NIF/NIE/CIF, IVA intracomunitario) y moneda de visualización (Euro o Dólar) — todos opcionales.
+- Vuelta directa a la app operativa, y cierre de sesión, desde el pie del menú lateral.
 
 ## Alcance del MVP
 

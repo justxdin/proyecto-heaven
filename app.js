@@ -119,10 +119,11 @@ const S = {
   facturasCenterId:'all',
 };
 
+function round2(n){ return Math.round((n + Number.EPSILON) * 100) / 100; }
 function money(n){
   const currency = DATA.profile.currency || 'EUR';
   const locale = currency==='USD' ? 'en-US' : 'es-ES';
-  return new Intl.NumberFormat(locale,{style:'currency',currency,maximumFractionDigits:0}).format(n);
+  return new Intl.NumberFormat(locale,{style:'currency',currency,minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
 }
 function currencySymbol(){ return (DATA.profile.currency||'EUR')==='USD' ? 'US$' : '€'; }
 function dualAmt(total, earned){
@@ -139,7 +140,7 @@ const ICON_PATHS = {
   'grid': '<rect x="3" y="3" width="7.5" height="7.5" rx="1.2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.2"/>',
   'filter': '<path d="M4 4.5h16l-6.2 7.4v6.1l-3.6 1.8v-7.9L4 4.5z"/>',
   'chevron-right': '<path d="M9 6l6 6-6 6"/>',
-  'settings': '<circle cx="12" cy="12" r="3.2"/><path d="M12 2v3.5M12 18.5V22M4.9 4.9l2.5 2.5M16.6 16.6l2.5 2.5M2 12h3.5M18.5 12H22M4.9 19.1l2.5-2.5M16.6 7.4l2.5-2.5"/>',
+  'settings': '<path d="M10.3 3.4a1.9 1.9 0 013.4 0l.3.6c.3.6 1 1 1.7.8l.6-.2a1.9 1.9 0 012.4 2.4l-.2.6c-.2.7.2 1.4.8 1.7l.6.3a1.9 1.9 0 010 3.4l-.6.3c-.6.3-1 1-.8 1.7l.2.6a1.9 1.9 0 01-2.4 2.4l-.6-.2c-.7-.2-1.4.2-1.7.8l-.3.6a1.9 1.9 0 01-3.4 0l-.3-.6c-.3-.6-1-1-1.7-.8l-.6.2a1.9 1.9 0 01-2.4-2.4l.2-.6c.2-.7-.2-1.4-.8-1.7l-.6-.3a1.9 1.9 0 010-3.4l.6-.3c.6-.3 1-1 .8-1.7l-.2-.6a1.9 1.9 0 012.4-2.4l.6.2c.7.2 1.4-.2 1.7-.8l.3-.6z"/><circle cx="12" cy="12" r="3"/>',
   'download': '<path d="M12 3v12M7.5 10.5L12 15l4.5-4.5M5 21h14"/>',
   'mail': '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5L12 13l8.5-6.5"/>',
   'edit': '<path d="M17.5 3.5a2.1 2.1 0 013 3L8 19l-4.5 1 1-4.5L17.5 3.5z"/>',
@@ -413,11 +414,11 @@ function adminScreen(){
   <div class="admin-wrap admin-theme">
     <div class="mobile-topbar">
       <div class="mt-left">
-        <button class="hamburger-btn" onclick="App.goOperator()" title="Volver a la app" aria-label="Volver a la app">${icon('home',18)}</button>
         <button class="mt-brand" onclick="App.setAdminScreen('resumen')"><div class="mark"><img src="${ICON}" alt="Heaven"/></div><div class="name">Heaven</div></button>
       </div>
       <div class="mt-actions">
-        <button class="gear-btn ${S.adminScreen==='perfil'?'active':''}" onclick="App.setAdminScreen('perfil')" title="Ajustes">${icon('settings',17)}</button>
+        <button class="mt-labeled-btn" onclick="App.goOperator()" title="Volver a la app">${icon('home',15)}<span>App</span></button>
+        <button class="mt-labeled-btn ${S.adminScreen==='perfil'?'active':''}" onclick="App.setAdminScreen('perfil')" title="Perfil">${icon('settings',15)}<span>Perfil</span></button>
         <button class="hamburger-btn" onclick="App.toggleMobileNav()" aria-label="Abrir menú">
           <span class="bars"><span></span><span></span><span></span></span>
         </button>
@@ -611,7 +612,7 @@ function adminResumen(){
     <div class="stat-card"><div class="lbl">Total ganado</div><div class="val" style="color:var(--accent)">${money(totalGanado)}</div></div>
     ${cid==='all'
       ? `<div class="stat-card"><div class="lbl">Centros activos</div><div class="val">${DATA.centers.filter(c=>c.active).length}</div></div>`
-      : `<div class="stat-card"><div class="lbl">Promedio por registro</div><div class="val">${money(filtered.length? Math.round(totalFact/filtered.length):0)}</div></div>`}
+      : `<div class="stat-card"><div class="lbl">Promedio por registro</div><div class="val">${money(filtered.length? round2(totalFact/filtered.length):0)}</div></div>`}
   </div>
 
   ${cid==='all' ? `
@@ -793,11 +794,11 @@ function tarifaAccordionItem(p, variables, draft, isOpen){
       ${effectiveDiff ? variables.map(v=>`
         <div class="var-value-row">
           <span class="vv-lbl">${v.name}</span>
-          <input class="rate-input" type="number" min="0" step="1" placeholder="Ej: 45" style="width:120px" value="${draft[p.id+'_'+v.id]}" onchange="App.setDraftRate('${p.id}_${v.id}',this.value)"/>
+          <input class="rate-input" type="number" min="0" step="0.01" placeholder="Ej: 45" style="width:120px" value="${draft[p.id+'_'+v.id]}" onchange="App.setDraftRate('${p.id}_${v.id}',this.value)"/>
         </div>`).join('') : `
         <div class="var-value-row">
           <span class="vv-lbl">Valor</span>
-          <input class="rate-input" type="number" min="0" step="1" placeholder="Ej: 45" style="width:120px" value="${draft[p.id+'_unico']}" onchange="App.setDraftRate('${p.id}_unico',this.value)"/>
+          <input class="rate-input" type="number" min="0" step="0.01" placeholder="Ej: 45" style="width:120px" value="${draft[p.id+'_unico']}" onchange="App.setDraftRate('${p.id}_unico',this.value)"/>
         </div>`}
     </div>` : ''}
   </div>`;
@@ -957,8 +958,8 @@ function adminFacturacion(){
     const base = Math.max(0, honorarios - gastoMonto);
     const ivaPct = parseFloat(f.ivaPct)||0;
     const retPct = parseFloat(f.retPct)||0;
-    const ivaAmount = Math.round(base*ivaPct/100);
-    const retAmount = Math.round(base*retPct/100);
+    const ivaAmount = round2(base*ivaPct/100);
+    const retAmount = round2(base*retPct/100);
     const total = base + ivaAmount - retAmount;
     preview = { count: regs.length, honorarios, gastoMonto, base, ivaAmount, retAmount, total };
   }
@@ -988,10 +989,10 @@ function adminFacturacion(){
     </div>
 
     <div class="section-label" style="margin-top:16px">Gastos (opcional)</div>
-    <p class="hint" style="padding:0 0 10px">* Si cargás un gasto, se resta de los honorarios antes de calcular la base imponible, el IVA y la retención.</p>
+    <p class="hint" style="padding:0 0 10px">* Si se agrega un gasto, se resta de los honorarios antes de calcular la base imponible, el IVA y la retención.</p>
     <div class="form-grid" style="margin: 10px 0;">
       <div class="f"><label>Descripción del gasto</label><input placeholder="Ej: Material clínico" value="${f.gastoDesc}" onchange="App.setFacturaField('gastoDesc',this.value)"/></div>
-      <div class="f"><label>Monto del gasto</label><input class="rate-input" type="number" min="0" step="1" placeholder="Ej: 120" style="width:100%" value="${f.gastoMonto}" onchange="App.setFacturaField('gastoMonto',this.value)"/></div>
+      <div class="f"><label>Monto del gasto</label><input class="rate-input" type="number" min="0" step="0.01" placeholder="Ej: 120" style="width:100%" value="${f.gastoMonto}" onchange="App.setFacturaField('gastoMonto',this.value)"/></div>
     </div>
 
     <div class="f" style="margin-top:10px">
@@ -1261,7 +1262,7 @@ const App = {
     const f = S.form;
     const total = f.procIds.reduce((s,pid)=>s+rateFor(f.centerId,pid,f.variableId),0);
     const profitPct = profitPctFor(f.centerId, f.variableId);
-    const earned = Math.round(total * profitPct / 100);
+    const earned = round2(total * profitPct / 100);
     regCounter++;
     const id = 'r'+regCounter;
     const date = new Date().toISOString().slice(0,10);
@@ -1559,8 +1560,8 @@ const App = {
     const base = Math.max(0, honorarios - gastoMonto);
     const ivaPct = parseFloat(f.ivaPct)||0;
     const retPct = parseFloat(f.retPct)||0;
-    const ivaAmount = Math.round(base*ivaPct/100);
-    const retAmount = Math.round(base*retPct/100);
+    const ivaAmount = round2(base*ivaPct/100);
+    const retAmount = round2(base*retPct/100);
     const total = base + ivaAmount - retAmount;
     const descripcion = (f.descripcion && f.descripcion.trim())
       ? f.descripcion.trim()
@@ -1603,7 +1604,7 @@ const App = {
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   },
   setDraftRate(key,val){
-    const n = parseInt(val,10)||0;
+    const n = round2(parseFloat(val)||0);
     S.tarifaDraft[key] = n;
     S.tarifaDirty = true;
     S.tarifaSaved = false;
@@ -1632,7 +1633,7 @@ const App = {
     r.variableId = vid;
     r.total = r.procIds.reduce((s,pid)=>s+rateFor(r.centerId,pid,r.variableId),0);
     r.profitPct = profitPctFor(r.centerId, r.variableId);
-    r.earned = Math.round(r.total * r.profitPct / 100);
+    r.earned = round2(r.total * r.profitPct / 100);
     render();
   },
   editToggleProc(pid){
@@ -1641,7 +1642,7 @@ const App = {
     if(i>-1) r.procIds.splice(i,1); else r.procIds.push(pid);
     r.total = r.procIds.reduce((s,id)=>s+rateFor(r.centerId,id,r.variableId),0);
     r.profitPct = profitPctFor(r.centerId, r.variableId);
-    r.earned = Math.round(r.total * r.profitPct / 100);
+    r.earned = round2(r.total * r.profitPct / 100);
     render();
   },
   saveEdit(){

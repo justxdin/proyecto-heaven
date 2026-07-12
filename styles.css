@@ -46,6 +46,7 @@
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235B6B70' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
     background-repeat:no-repeat;background-position:right 10px center;background-size:15px;
     padding-right:32px;
+    color:var(--ink);
   }
   select:hover{border-color:var(--accent);}
 
@@ -316,7 +317,14 @@
     display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;}
   .mt-brand .mark img{width:100%;height:100%;object-fit:contain;filter:brightness(0) invert(1);}
   .mt-brand .name{font-family:var(--display);font-weight:700;font-size:15px;white-space:nowrap;color:#fff;}
-  .mt-actions{display:flex;align-items:center;gap:8px;}
+  .mt-actions{display:flex;align-items:center;gap:6px;}
+  .mt-labeled-btn{
+    display:flex;align-items:center;gap:5px;height:36px;padding:0 10px;flex-shrink:0;
+    border-radius:10px;border:1px solid rgba(255,255,255,.18);background:transparent;
+    color:var(--admin-navy-soft);font-size:11.5px;font-weight:600;white-space:nowrap;
+  }
+  .mt-labeled-btn:hover{background:rgba(255,255,255,.08);color:#fff;}
+  .mt-labeled-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
   .hamburger-btn{
     width:36px;height:36px;flex-shrink:0;border-radius:10px;border:1px solid rgba(255,255,255,.18);
     background:transparent;display:flex;align-items:center;justify-content:center;gap:0;color:#fff;
@@ -451,6 +459,7 @@
   .f input:hover{border-color:var(--accent);}
   .f input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
   .f input:disabled{background-color:var(--surface-alt);color:var(--ink-faint);cursor:not-allowed;opacity:.7;}
+  input[type="date"]{min-width:0;max-width:100%;}
 
   table{width:100%;border-collapse:collapse;font-size:13px;}
   th{text-align:left;padding:10px 16px;background:var(--surface-alt);color:var(--ink-soft);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;}
@@ -537,11 +546,10 @@
   @media (max-width:760px){
     /* Evita el zoom automático de iOS al enfocar campos con letra menor a 16px */
     input:not([type="date"]), select, textarea{font-size:16px !important; zoom: 0.875; }
-    /* Los inputs de fecha quedan afuera del zoom: en iOS esa propiedad
-       desalinea el área táctil del selector nativo y hace falta tocar dos veces.
-       Tampoco llevan appearance:none: en type="date" (a diferencia de los select)
-       rompe la interacción nativa en iOS y selecciona una fecha sola al primer toque. */
-    input[type="date"]{font-size:16px !important; min-height:44px; padding-top:10px; padding-bottom:10px;}
+    /* Los inputs de fecha quedan afuera del zoom y de ajustes manuales de alto/padding:
+       en iOS esas propiedades chocan con el layout nativo del control y provocan
+       desbordes o que se auto-seleccione una fecha al primer toque. */
+    input[type="date"]{font-size:16px !important;}
     .rate-input{width:100%;}
     .mobile-topbar{
       display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;

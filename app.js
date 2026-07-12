@@ -1674,4 +1674,33 @@ document.addEventListener('keydown', (e)=>{
   if(S.mobileNavOpen){ App.closeMobileNav(); return; }
 });
 
+// Botón de diagnóstico temporal — corre el chequeo de overflow horizontal
+// directamente en el dispositivo, sin necesitar el inspector de Safari.
+// TODO: sacar este bloque una vez resuelto el bug de iPhone.
+(function(){
+  const btn = document.createElement('button');
+  btn.textContent = '🐞';
+  btn.title = 'Diagnóstico de ancho de pantalla';
+  btn.style.cssText = 'position:fixed;bottom:14px;right:14px;z-index:99999;width:40px;height:40px;border-radius:50%;border:none;background:#111;color:#fff;font-size:18px;box-shadow:0 2px 10px rgba(0,0,0,.4);';
+  btn.onclick = function(){
+    const vw = window.innerWidth;
+    const dw = document.documentElement.scrollWidth;
+    const offenders = [];
+    document.querySelectorAll('*').forEach(function(el){
+      if(el.closest('.admin-side') || el.closest('.nav-backdrop')) return; // el menú cerrado vive fuera de pantalla a propósito
+      if(el.tagName==='svg' || el.namespaceURI==='http://www.w3.org/2000/svg') return; // iconos internos, no aportan
+      const r = el.getBoundingClientRect();
+      const cls = el.getAttribute('class')||'';
+      if(r.right > vw + 2 || r.left < -2){
+        offenders.push(el.tagName+'.'+cls.slice(0,25)+' L:'+Math.round(r.left)+' R:'+Math.round(r.right));
+      }
+    });
+    alert('Ancho de pantalla: '+vw+'\nAncho del documento: '+dw+
+      (dw>vw ? '\n\n⚠️ HAY OVERFLOW HORIZONTAL' : '\n\n✅ Sin overflow') +
+      '\n\nElementos fuera de rango:\n'+(offenders.slice(0,8).join('\n')||'ninguno'));
+  };
+  document.addEventListener('DOMContentLoaded', ()=>document.body.appendChild(btn));
+  if(document.readyState !== 'loading') document.body.appendChild(btn);
+})();
+
 render();

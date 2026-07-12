@@ -290,9 +290,9 @@ function opRegistro(){
 
     <div class="section-label">Centro</div>
     <div class="chip-row">
-      ${DATA.centers.map(c=>`
+      ${DATA.centers.filter(c=>c.active).map(c=>`
         <button class="chip ${f.centerId===c.id?'selected':''}" style="${f.centerId===c.id ? `background:${c.color};border-color:${c.color};color:#fff;` : ''}" onclick="App.setCenter('${c.id}')">${c.name}</button>
-      `).join('')}
+      `).join('') || '<p class="hint">No hay centros activos disponibles.</p>'}
     </div>
 
     <div class="section-label">Paciente</div>
@@ -686,7 +686,7 @@ function centerCard(c, editing){
         <div class="var-row">
           <input placeholder="Nombre (ej. Adulto)" value="${v.name}" onchange="App.setCenterVarField(${idx},'name',this.value)"/>
           <input class="rate-input" type="number" min="0" max="100" step="any" placeholder="Ej: 35" style="width:70px" value="${v.pct}" onchange="App.setCenterVarField(${idx},'pct',this.value)"/><span style="font-size:13px;color:var(--ink-faint)">%</span>
-          <button class="icon-btn danger" onclick="App.removeCenterVariable(${idx})">×</button>
+          <button class="icon-btn danger" onclick="App.removeCenterVariable(${idx})" aria-label="Eliminar variable">×</button>
         </div>`).join('') || '<div class="empty" style="padding:14px 0">Sin variables. Agrega al menos una.</div>'}
     </div>
     <button class="icon-btn" style="margin-top:8px" onclick="App.addCenterVariable()">${icon('plus-circle',13)} Agregar variable</button>
@@ -1320,7 +1320,7 @@ const App = {
   },
   removeCenterVariable(idx){ S.editCenterVars.splice(idx,1); render(); },
   setCenterVarField(idx, field, val){
-    S.editCenterVars[idx][field] = field==='pct' ? (parseFloat(val)||0) : val;
+    S.editCenterVars[idx][field] = field==='pct' ? Math.min(100, Math.max(0, parseFloat(val)||0)) : val;
     render();
   },
   saveEditCenter(id){
@@ -1542,6 +1542,9 @@ const App = {
     S.profileDirty = false; S.profileSaved = true; render();
   },
   setFacturaField(field,val){
+    if(field==='ivaPct' || field==='retPct' || field==='gastoMonto'){
+      val = val==='' ? '' : Math.max(0, parseFloat(val)||0);
+    }
     S.facturaForm[field] = val;
     const f = S.facturaForm;
     if(field==='dateFrom' && f.dateTo && val && f.dateTo < val) f.dateTo = val;
@@ -1553,7 +1556,11 @@ const App = {
     if(!f.numero || !f.numero.trim()){ alert('Ingresa un número de factura.'); return; }
     if(!f.dateFrom || !f.dateTo){ alert('Selecciona el periodo (fecha de operación).'); return; }
     if(f.dateFrom > f.dateTo){ alert('La fecha "desde" no puede ser posterior a "hasta".'); return; }
+    const numeroTrim = f.numero.trim();
+    const dup = DATA.invoices.find(inv=>inv.numero.trim().toLowerCase()===numeroTrim.toLowerCase());
+    if(dup && !confirm(`Ya existe una factura con el número "${numeroTrim}" (${centerName(dup.centerId)}, ${fmtDate(dup.dateFrom)} a ${fmtDate(dup.dateTo)}). ¿Generar igual?`)) return;
     const regs = DATA.registrations.filter(r=>!r.deleted && r.centerId===f.centerId && r.date>=f.dateFrom && r.date<=f.dateTo);
+    if(regs.length===0 && !confirm('No hay registros de este centro en el periodo elegido, así que la factura quedaría en 0. ¿Generar igual?')) return;
     const honorarios = regs.reduce((s,r)=>s+(r.earned||0),0);
     const gastoDesc = (f.gastoDesc||'').trim();
     const gastoMonto = parseFloat(f.gastoMonto)||0;
@@ -1604,7 +1611,7 @@ const App = {
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   },
   setDraftRate(key,val){
-    const n = round2(parseFloat(val)||0);
+    const n = round2(Math.max(0, parseFloat(val)||0));
     S.tarifaDraft[key] = n;
     S.tarifaDirty = true;
     S.tarifaSaved = false;
@@ -1658,5 +1665,13 @@ const App = {
     render();
   },
 };
+
+document.addEventListener('keydown', (e)=>{
+  if(e.key !== 'Escape') return;
+  if(S.ticket){ App.closeTicket(); return; }
+  if(S.detailReg){ App.closeDetail(); return; }
+  if(S.editReg){ App.closeEdit(); return; }
+  if(S.mobileNavOpen){ App.closeMobileNav(); return; }
+});
 
 render();

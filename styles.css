@@ -544,12 +544,12 @@
   .modal-actions .primary:hover{background:#1d4ed8;border-color:#1d4ed8;}
 
   @media (max-width:760px){
-    /* Evita el zoom automático de iOS al enfocar campos con letra menor a 16px */
-    input:not([type="date"]), select, textarea{font-size:16px !important; zoom: 0.875; }
-    /* Los inputs de fecha quedan afuera del zoom y de ajustes manuales de alto/padding:
-       en iOS esas propiedades chocan con el layout nativo del control y provocan
-       desbordes o que se auto-seleccione una fecha al primer toque. */
-    input[type="date"]{font-size:16px !important;}
+    /* Evita el zoom automático de iOS al enfocar campos con letra menor a 16px.
+       Importante: NO usar la propiedad "zoom" para compensar visualmente el tamaño
+       — confunde el propio mecanismo de auto-zoom de iOS y termina causando el
+       zoom que se supone debía evitar. Los inputs se ven un poco más grandes en
+       mobile, pero es el precio correcto a pagar por que no salte el zoom solo. */
+    input, select, textarea{font-size:16px !important;}
     .rate-input{width:100%;}
     .mobile-topbar{
       display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;

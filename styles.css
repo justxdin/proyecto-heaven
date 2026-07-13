@@ -382,8 +382,11 @@
   .dual-amt .dv-lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);font-weight:700;white-space:nowrap;}
   .dual-amt .dv-val{font-family:var(--mono);font-size:13.5px;font-weight:600;color:var(--ink);white-space:nowrap;}
   .dual-amt .dv.accent .dv-val{color:var(--accent);}
+  .name-stack{min-width:0;}
+  .name-stack .n1{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .name-stack .n2{font-size:11.5px;font-weight:400;color:var(--ink-faint);margin-top:2px;}
   @media (max-width:480px){
-    .bar-row.dual{align-items:stretch;}
+    .bar-row.dual{display:grid;grid-template-columns:1fr 145px;align-items:center;gap:6px 12px;}
     .bar-row.dual .name{flex-basis:auto;}
     .bar-row.dual .bar-track{display:none;}
     .dual-amt{margin-left:0;justify-content:flex-start;}

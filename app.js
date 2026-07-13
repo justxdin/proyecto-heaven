@@ -642,7 +642,10 @@ function adminResumen(){
     <div class="panel-title">Últimos registros${cid==='all'?'':' — '+centerName(cid)}</div>
     ${recent.length===0 ? `<div class="empty">Sin registros.</div>` : recent.map(r=>`
       <div class="bar-row dual">
-        <div class="name">${centerName(r.centerId)} <span style="font-weight:400;color:var(--ink-faint);font-size:11.5px">— ${fmtDate(r.date)}</span></div>
+        <div class="name-stack">
+          <div class="n1">${centerName(r.centerId)}</div>
+          <div class="n2">${fmtDate(r.date)}</div>
+        </div>
         ${dualAmt(r.total, r.earned)}
       </div>`).join('')}
   </div>`;

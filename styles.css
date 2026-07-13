@@ -462,6 +462,7 @@
   input[type="date"]{
     min-width:0;max-width:100%;box-sizing:border-box;
     -webkit-appearance:none;-moz-appearance:none;appearance:none;
+    min-height:44px;
   }
   input[type="date"]::-webkit-datetime-edit{padding:0;margin-bottom:-2px;line-height:1;}
   input[type="date"]::-webkit-date-and-time-value{text-align:left !important;}

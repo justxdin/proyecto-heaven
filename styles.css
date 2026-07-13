@@ -517,7 +517,7 @@
   .export-btn .ico{font-size:12px;}
   @media (min-width:640px){ .export-btn{flex:none;} }
   .date-filter{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
-  .date-filter .f{display:flex;flex-direction:column;gap:5px;}
+  .date-filter .f{display:flex;flex-direction:column;gap:5px;flex:1;min-width:140px;}
   .date-filter .f label{font-size:11px;color:var(--ink-faint);font-weight:600;text-transform:uppercase;letter-spacing:.03em;}
   .date-filter .f input{padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;}
   .rate-select select{padding:9px 32px 9px 12px;border:1px solid var(--border);border-radius:9px;font-size:13.5px;background-color:var(--surface);}
